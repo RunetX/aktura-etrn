@@ -1,0 +1,402 @@
+# Тест-кейсы базы правил: каждое правило — минимум один кейс (бриф §9).
+# facts — ответы дерева (VOCABULARY.md); expect — что должен вернуть движок.
+# Незаданные факты считаются unknown. Кейс проверяет: сработавшие правила, carriage_doc, роли, form.
+
+cases:
+
+  - id: T-001
+    story: "Производитель везёт свою продукцию покупателю на своём грузовике."
+    facts: { transport: own_seller, seller_paid_delivery: no, ownership_before_delivery: no, international: no }
+    expect: { rules: [R-001], carriage_doc: none }
+
+  - id: T-002
+    story: "Покупатель забирает товар со склада поставщика своей машиной."
+    facts: { transport: own_buyer, international: no }
+    expect: { rules: [R-002], carriage_doc: none }
+
+  - id: T-003
+    story: "Поставщик заказывает ТК и везёт товар покупателю-организации."
+    facts: { transport: hired_carrier, carriage_customer: seller, international: no, tmc_accounting: yes, owner_escort: no }
+    expect:
+      rules: [R-003]
+      carriage_doc: etrn
+      roles: { shipper: seller, consignee: buyer, carrier: carrier }
+      form: electronic
+
+  - id: T-004
+    story: "Покупатель нанимает ТК, та забирает груз у поставщика и везёт на склад покупателя."
+    facts: { transport: hired_carrier, carriage_customer: buyer, international: no, tmc_accounting: yes, owner_escort: no }
+    expect:
+      rules: [R-004, R-107]
+      carriage_doc: etrn
+      roles: { shipper: buyer, consignee: buyer, loader: seller }
+      form: paper_allowed
+      certainty: clear
+
+  - id: T-005
+    story: "Компания перевозит товар со склада в Москве в свой филиал в Туле своим грузовиком."
+    facts: { transport: own_company, international: no }
+    expect: { rules: [R-005], carriage_doc: none }
+
+  - id: T-006
+    story: "Компания нанимает ТК, чтобы отвезти товар со своего склада в свой филиал."
+    facts: { transport: hired_carrier, carriage_customer: company, international: no, tmc_accounting: yes, owner_escort: no }
+    expect:
+      rules: [R-006, R-107]
+      carriage_doc: etrn
+      roles: { shipper: company, consignee: company }
+      form: paper_allowed
+
+  - id: T-006b
+    story: "То же, но в договоре перевозки прописано, что накладная электронная."
+    facts: { transport: hired_carrier, carriage_customer: company, international: no, tmc_accounting: yes, owner_escort: no, etrn_in_contract: yes }
+    expect: { rules: [R-006, R-107], carriage_doc: etrn, form: electronic_by_contract }
+
+  - id: T-007
+    story: "Экспедитор принимает груз на свой склад, выдаёт экспедиторскую расписку и отправляет наёмной ТК."
+    facts: { transport: forwarder, forwarder_own_vehicles: no, forwarder_takes_possession: yes, international: no, tmc_accounting: yes, owner_escort: no }
+    expect:
+      rules: [R-007]
+      carriage_doc: etrn
+      roles: { shipper: forwarder, forwarder_client: client }
+      forwarder_mark: true
+      certainty: clear
+
+  - id: T-008
+    story: "Экспедитор только нашёл машину; поставщик сам грузит товар в машину перевозчика."
+    facts: { transport: forwarder, forwarder_own_vehicles: no, forwarder_takes_possession: no, international: no, tmc_accounting: yes, owner_escort: no }
+    expect: { rules: [R-008], carriage_doc: etrn, roles: { shipper: client }, certainty: clear }
+
+  - id: T-009
+    story: "Везут оборудование на выставку, едет представитель владельца; учёт ТМЦ не ведётся."
+    facts: { transport: hired_carrier, carriage_customer: seller, international: no, tmc_accounting: no, owner_escort: yes }
+    expect: { rules: [R-009], carriage_doc: charter }
+
+  - id: T-010
+    story: "Груз едет из Казахстана в Москву одной машиной по CMR."
+    facts: { international: yes }
+    expect: { rules: [R-010], carriage_doc: international }
+
+  - id: T-101
+    story: "Поставщик везёт груз наёмной ТК в воинскую часть, грузополучатель — Минобороны."
+    facts: { transport: hired_carrier, carriage_customer: seller, international: no, tmc_accounting: yes, owner_escort: no, exc_mod: yes }
+    expect: { rules: [R-003, R-101], form: paper_allowed }
+
+  - id: T-102
+    story: "Грузополучатель — иностранная компания без филиала в РФ, доставка по РФ."
+    facts: { transport: hired_carrier, carriage_customer: seller, international: no, tmc_accounting: yes, owner_escort: no, exc_foreign_unaccredited: yes }
+    expect: { rules: [R-003, R-102], form: paper_allowed }
+
+  - id: T-103
+    story: "Белорусский перевозчик везёт груз между двумя городами РФ."
+    facts: { transport: hired_carrier, carriage_customer: seller, international: no, tmc_accounting: yes, owner_escort: no, exc_eaeu_cabotage: yes }
+    expect: { rules: [R-003, R-103], form: paper_allowed }
+
+  - id: T-104
+    story: "Гражданин продаёт свой диван другому гражданину и сам нанимает перевозчика — он грузоотправитель."
+    facts: { transport: hired_carrier, carriage_customer: seller, international: no, tmc_accounting: yes, owner_escort: no, exc_individual_personal: yes }
+    expect: { rules: [R-003, R-104], form: paper_allowed, certainty: clear }
+
+  - id: T-105
+    story: "У оператора ЭДО сбой, ГосСОПКА его зафиксировала."
+    facts: { transport: hired_carrier, carriage_customer: seller, international: no, tmc_accounting: yes, owner_escort: no, exc_gossopka_failure: yes }
+    expect: { rules: [R-003, R-105], form: paper_allowed }
+
+  - id: T-106
+    story: "Погрузка в посёлке без интернета."
+    facts: { transport: hired_carrier, carriage_customer: seller, international: no, tmc_accounting: yes, owner_escort: no, exc_no_internet: yes }
+    expect: { rules: [R-003, R-106], form: paper_allowed }
+
+  - id: T-108
+    story: "Ювелирный завод отправляет золото наёмным перевозчиком."
+    facts: { transport: hired_carrier, carriage_customer: seller, international: no, tmc_accounting: yes, owner_escort: no, exc_precious: yes }
+    expect: { rules: [R-003, R-108], form: paper_allowed }
+
+  - id: T-109
+    story: "Доставка по региону, где введён режим повышенной готовности."
+    facts: { transport: hired_carrier, carriage_customer: seller, international: no, tmc_accounting: yes, owner_escort: no, exc_emergency_regime: yes }
+    expect: { rules: [R-003, R-109], form: paper_allowed }
+
+  - id: T-110
+    story: "Перевозка специального груза."
+    facts: { transport: hired_carrier, carriage_customer: seller, international: no, tmc_accounting: yes, owner_escort: no, exc_special_cargo: yes }
+    expect: { rules: [R-003, R-110], form: paper_allowed }
+
+  - id: T-111
+    story: "Типография отправляет тираж журнала наёмной ТК."
+    facts: { transport: hired_carrier, carriage_customer: seller, international: no, tmc_accounting: yes, owner_escort: no, exc_periodicals: yes }
+    expect: { rules: [R-003, R-111], form: paper_allowed }
+
+  - id: T-112
+    story: "Завод везёт продукцию двойного назначения на экспорт до пункта отгрузки по РФ."
+    facts: { transport: hired_carrier, carriage_customer: seller, international: no, tmc_accounting: yes, owner_escort: no, exc_military_dual_export: yes }
+    expect: { rules: [R-003, R-112], form: paper_allowed }
+
+  - id: T-113
+    story: "Интернет-магазин отправляет покупателю-гражданину диван; перевозчика нанял магазин, гражданин только грузополучатель."
+    facts: { transport: hired_carrier, carriage_customer: seller, international: no, tmc_accounting: yes, owner_escort: no, exc_individual_consignee: yes }
+    expect: { rules: [R-003, R-113], form: paper_allowed, certainty: disputed }
+
+  - id: T-113b
+    story: "То же, но у магазина нет доступа к интернету: бумагу даёт и бесспорное исключение, итог однозначен."
+    facts: { transport: hired_carrier, carriage_customer: seller, international: no, tmc_accounting: yes, owner_escort: no, exc_individual_consignee: yes, exc_no_internet: yes }
+    expect: { rules: [R-003, R-106, R-113], form: paper_allowed, certainty: clear }
+
+  - id: T-201
+    story: "Пользователь не знает, кто нанял перевозчика."
+    facts: { transport: hired_carrier, international: no, tmc_accounting: yes, owner_escort: no }
+    expect: { rules: [], ask: [carriage_customer] }
+
+  - id: T-007b
+    story: "Покупатель заключил договор экспедиции; экспедитор от своего имени нанял ТК и принял груз на свой склад."
+    facts: { transport: hired_carrier, carriage_customer: forwarder, forwarder_takes_possession: yes, international: no, tmc_accounting: yes, owner_escort: no }
+    expect: { rules: [R-007], roles: { shipper: forwarder }, forwarder_mark: true }
+
+  - id: T-011
+    story: "Продавец возит товар своим грузовиком и берёт за доставку отдельную плату."
+    facts: { transport: own_seller, seller_paid_delivery: yes, international: no }
+    expect: { rules: [R-011], carriage_doc: none, certainty: disputed }
+
+  - id: T-011b
+    story: "Товар оплачен и перешёл покупателю на складе продавца, продавец довозит его своей машиной бесплатно."
+    facts: { transport: own_seller, seller_paid_delivery: no, ownership_before_delivery: yes, international: no }
+    expect: { rules: [R-011], certainty: disputed }
+
+  - id: T-013
+    story: "Дилер от своего имени нанимает ТК, чтобы довезти товар завода конечному клиенту."
+    facts: { transport: hired_carrier, carriage_customer: other, intermediary_acts_in: own_name, international: no, tmc_accounting: yes, owner_escort: no }
+    expect: { rules: [R-013], roles: { shipper: intermediary } }
+
+  - id: T-014
+    story: "Агент по доверенности покупателя заключил договор перевозки от имени покупателя."
+    facts: { transport: hired_carrier, carriage_customer: other, intermediary_acts_in: principal_name, international: no, tmc_accounting: yes, owner_escort: no }
+    expect: { rules: [R-014], roles: { shipper: principal } }
+
+  - id: T-202
+    story: "Продавец везёт своим транспортом, про оплату доставки неизвестно."
+    facts: { transport: own_seller, international: no }
+    expect: { rules: [], ask: [seller_paid_delivery] }
+
+  # ---------- v0.4: новые правила и уточнение ролей фактами ----------
+
+  - id: T-015
+    story: "Сотрудник покупателя забирает мелкую покупку у поставщика на личной машине, договора перевозки нет."
+    facts: { transport: no_contract, international: no }
+    expect: { rules: [R-015], carriage_doc: none, certainty: clear }
+
+  - id: T-016
+    story: "Экспедитор принимает груз и сам везёт его своим грузовиком."
+    facts: { transport: forwarder, forwarder_own_vehicles: yes, forwarder_takes_possession: yes, international: no, tmc_accounting: yes, owner_escort: no }
+    expect:
+      rules: [R-016]
+      carriage_doc: etrn
+      roles: { shipper: client, carrier: forwarder }
+      form: electronic
+      certainty: disputed
+
+  - id: T-017
+    story: "Транзит: поставщик нанимает перевозчика и везёт груз клиенту своего покупателя; грузит склад ответхранения."
+    facts: { transport: hired_carrier, carriage_customer: seller, consignee_party: third_party, loader: warehouse, international: no, tmc_accounting: yes, owner_escort: no }
+    expect:
+      rules: [R-003]
+      roles: { shipper: seller, consignee: third_party, loader: warehouse }
+      form: electronic
+
+  - id: T-018
+    story: "Компания возит свой груз между своими складами через экспедитора, который груз не принимает."
+    facts: { transport: forwarder, forwarder_own_vehicles: no, forwarder_takes_possession: no, consignee_party: customer_itself, international: no, tmc_accounting: yes, owner_escort: no }
+    expect:
+      rules: [R-008, R-107]
+      roles: { shipper: client, consignee: client }
+      form: paper_allowed
+
+  - id: T-018b
+    story: "То же, но экспедитор принимает груз и выдаёт экспедиторскую расписку."
+    facts: { transport: forwarder, forwarder_own_vehicles: no, forwarder_takes_possession: yes, consignee_party: customer_itself, international: no, tmc_accounting: yes, owner_escort: no }
+    expect:
+      rules: [R-007]
+      roles: { shipper: forwarder, consignee: client }
+      form: electronic
+
+  - id: T-019
+    story: "Покупатель нанимает перевозчика, чтобы тот сразу отвёз товар покупателю покупателя."
+    facts: { transport: hired_carrier, carriage_customer: buyer, consignee_party: customer_buyer, international: no, tmc_accounting: yes, owner_escort: no }
+    expect:
+      rules: [R-004]
+      roles: { shipper: buyer, consignee: third_party }
+      form: electronic
+
+  - id: T-020
+    story: "Продавец нанимает перевозчика довезти груз до терминала службы доставки."
+    facts: { transport: hired_carrier, carriage_customer: seller, consignee_party: terminal, international: no, tmc_accounting: yes, owner_escort: no }
+    expect: { rules: [R-003], carriage_doc: etrn, certainty: unknown }
+
+  - id: T-021
+    story: "Компания везёт свой товар на грузовике, арендованном с экипажем."
+    facts: { transport: rented_with_crew, international: no }
+    expect: { rules: [R-017], carriage_doc: none, certainty: disputed }
+
+  - id: T-022
+    story: "Груз везут из Москвы в Калининград через Литву."
+    facts: { international: ru_via_foreign }
+    expect: { rules: [R-018], carriage_doc: undetermined, certainty: unknown }
+
+  - id: T-023
+    story: "Экспедитор принял груз клиента по экспедиторской расписке и везёт его наёмным перевозчиком на свой склад."
+    facts: { transport: forwarder, forwarder_own_vehicles: no, forwarder_takes_possession: yes, consignee_party: shipper_itself, international: no, tmc_accounting: yes, owner_escort: no }
+    expect:
+      rules: [R-007, R-107]
+      roles: { shipper: forwarder, consignee: forwarder }
+      form: paper_allowed
+
+  # ---------- Экспедиторские документы (слои fwd_docs и fwd_form) ----------
+  # fwd_rules — сработавшие правила этих слоёв (в rules они не входят).
+
+  - id: T-201
+    story: "Экспедитор принял груз по расписке и нанял перевозчика; ничего особенного в перевозке нет."
+    facts: { transport: forwarder, forwarder_own_vehicles: no, forwarder_takes_possession: yes, fwd_storage: "no", international: "no", tmc_accounting: yes, owner_escort: "no",
+             exc_fwd_state_needs: "no", exc_fwd_emergency_regime: "no", exc_fwd_force_majeure_client: "no", exc_fwd_force_majeure_forwarder: "no", exc_fwd_consumer: "no", exc_fwd_foreign_client: "no" }
+    expect:
+      rules: [R-007]
+      fwd_rules: [R-201, R-202]
+      forwarding_docs: [epe, eer]
+      forwarding_form: electronic
+
+  - id: T-202
+    story: "Экспедитор только организует перевозку, груз не принимает."
+    facts: { transport: forwarder, forwarder_own_vehicles: no, forwarder_takes_possession: "no", international: "no", tmc_accounting: yes, owner_escort: "no" }
+    expect:
+      rules: [R-008]
+      fwd_rules: [R-201]
+      forwarding_docs: [epe]
+      forwarding_form: electronic
+
+  - id: T-203
+    story: "Экспедитор принимает груз на свой склад на хранение, потом отправляет наёмным перевозчиком."
+    facts: { transport: forwarder, forwarder_own_vehicles: no, forwarder_takes_possession: yes, fwd_storage: yes, international: "no", tmc_accounting: yes, owner_escort: "no" }
+    expect:
+      fwd_rules: [R-201, R-202, R-203]
+      forwarding_docs: [epe, eer, warehouse_receipt]
+
+  - id: T-204
+    story: "Экспедитор организует перевозку грузов для нужд органа власти."
+    facts: { transport: forwarder, forwarder_own_vehicles: no, forwarder_takes_possession: "no", international: "no", tmc_accounting: yes, owner_escort: "no", exc_fwd_state_needs: yes }
+    expect: { fwd_rules: [R-201, R-211], forwarding_form: paper_allowed }
+
+  - id: T-205
+    story: "В регионе введён режим ЧС, экспедитор организует перевозку."
+    facts: { transport: forwarder, forwarder_own_vehicles: no, forwarder_takes_possession: "no", international: "no", tmc_accounting: yes, owner_escort: "no", exc_fwd_emergency_regime: yes }
+    expect: { fwd_rules: [R-201, R-212], forwarding_form: paper_allowed }
+
+  - id: T-206
+    story: "У клиента из-за непреодолимой силы нет интернета, отправить поручение электронно он не может."
+    facts: { transport: forwarder, forwarder_own_vehicles: no, forwarder_takes_possession: "no", international: "no", tmc_accounting: yes, owner_escort: "no", exc_fwd_force_majeure_client: yes }
+    expect: { fwd_rules: [R-201, R-213], forwarding_form: paper_allowed }
+
+  - id: T-207
+    story: "У экспедитора из-за непреодолимой силы нет интернета."
+    facts: { transport: forwarder, forwarder_own_vehicles: no, forwarder_takes_possession: "no", international: "no", tmc_accounting: yes, owner_escort: "no", exc_fwd_force_majeure_forwarder: yes }
+    expect: { fwd_rules: [R-201, R-214], forwarding_form: paper_allowed }
+
+  - id: T-208
+    story: "Клиент экспедитора — физлицо, перевозит свои вещи при переезде."
+    facts: { transport: forwarder, forwarder_own_vehicles: no, forwarder_takes_possession: "no", international: "no", tmc_accounting: yes, owner_escort: "no", exc_fwd_consumer: yes, fwd_docs_in_contract: "no" }
+    expect: { fwd_rules: [R-201, R-215], forwarding_form: paper_allowed }
+
+  - id: T-209
+    story: "Клиент экспедитора — иностранная компания; договор экспедиции предусматривает электронные документы."
+    facts: { transport: forwarder, forwarder_own_vehicles: no, forwarder_takes_possession: "no", international: "no", tmc_accounting: yes, owner_escort: "no", exc_fwd_foreign_client: yes, fwd_docs_in_contract: yes }
+    expect: { fwd_rules: [R-201, R-216], forwarding_form: electronic_by_contract }
+
+  - id: T-210
+    story: "Продавец сам нанял перевозчика, экспедитора нет — экспедиторских документов нет."
+    facts: { transport: hired_carrier, carriage_customer: seller, international: "no", tmc_accounting: yes, owner_escort: "no" }
+    expect: { rules: [R-003], fwd_rules: [], forwarding_docs: [] }
+
+  - id: T-211
+    story: "ТК-экспедитор приняла груз; чьими машинами повезёт — ещё не спрошено. Экспедиторские документы от этого не зависят (C2, G-047, G-048)."
+    facts: { transport: forwarder, forwarder_takes_possession: yes, international: "no", tmc_accounting: yes, owner_escort: "no" }
+    expect: { rules: [], ask: [forwarder_own_vehicles], fwd_rules: [R-201, R-202], forwarding_docs: [epe, eer] }
+
+  - id: T-212
+    story: "То же, пользователь не знает, чьими машинами везёт ТК: сценарий ЭТрН не выбран, экспедиторские документы — есть."
+    facts: { transport: forwarder, forwarder_takes_possession: yes, forwarder_own_vehicles: unknown, international: "no", tmc_accounting: yes, owner_escort: "no",
+             exc_fwd_state_needs: "no", exc_fwd_emergency_regime: "no", exc_fwd_force_majeure_client: "no", exc_fwd_force_majeure_forwarder: "no", exc_fwd_consumer: "no", exc_fwd_foreign_client: "no" }
+    expect: { rules: [], fwd_rules: [R-201, R-202], forwarding_docs: [epe, eer], forwarding_form: electronic, certainty: unknown }
+
+  # ---------- Транспортная компания: вид договора (C2, словарь 0.5) ----------
+  # transport: tk сводится к существующим сценариям: tk_contract carriage → hired_carrier;
+  # forwarding → forwarder, forwarder_takes_possession: yes (ТК принимает груз — так определён вариант).
+
+  - id: T-301
+    story: "Сдаём груз в ТК, вид договора ещё не спрошен."
+    facts: { transport: tk, international: "no", tmc_accounting: yes, owner_escort: "no" }
+    expect: { rules: [], ask: [tk_contract] }
+
+  - id: T-302
+    story: "Договор перевозки с ТК заключил покупатель, продавец сдаёт груз на терминал (G-105)."
+    facts: { transport: tk, tk_contract: carriage, carriage_customer: buyer, international: "no", tmc_accounting: yes, owner_escort: "no" }
+    expect: { rules: [R-004, R-107], carriage_doc: etrn, roles: { shipper: buyer, consignee: buyer }, form: paper_allowed, fwd_rules: [] }
+
+  - id: T-303
+    story: "Договор перевозки с ТК заключил продавец, ТК везёт покупателю."
+    facts: { transport: tk, tk_contract: carriage, carriage_customer: seller, international: "no", tmc_accounting: yes, owner_escort: "no" }
+    expect: { rules: [R-003], carriage_doc: etrn, roles: { shipper: seller }, form: electronic }
+
+  - id: T-304
+    story: "Договор экспедиции с ТК, ТК нанимает перевозчиков."
+    facts: { transport: tk, tk_contract: forwarding, forwarder_own_vehicles: "no", international: "no", tmc_accounting: yes, owner_escort: "no" }
+    expect: { rules: [R-007], roles: { shipper: forwarder }, forwarder_mark: true, fwd_rules: [R-201, R-202], forwarding_docs: [epe, eer] }
+
+  - id: T-305
+    story: "Договор экспедиции с ТК; чьими машинами везёт ТК — неизвестно (G-047, G-048)."
+    facts: { transport: tk, tk_contract: forwarding, forwarder_own_vehicles: unknown, international: "no", tmc_accounting: yes, owner_escort: "no" }
+    expect: { rules: [], certainty: unknown, fwd_rules: [R-201, R-202], forwarding_docs: [epe, eer] }
+
+  - id: T-306
+    story: "Договор экспедиции с ТК, ТК везёт своими машинами."
+    facts: { transport: tk, tk_contract: forwarding, forwarder_own_vehicles: yes, international: "no", tmc_accounting: yes, owner_escort: "no" }
+    expect: { rules: [R-016], carriage_doc: etrn, certainty: disputed, forwarding_docs: [epe, eer] }
+
+  - id: T-307
+    story: "Сдаём груз в ТК, вид договора неизвестен: движок не угадывает."
+    facts: { transport: tk, tk_contract: unknown, international: "no", tmc_accounting: yes, owner_escort: "no" }
+    expect: { rules: [], certainty: unknown, fwd_rules: [] }
+
+  - id: T-308
+    story: "Продавец привёз груз на терминал ТК, в машину грузит сама ТК; договор перевозки заключил покупатель (G-105). Устав ст. 11 ч. 8, 11: погрузка перевозчиком по договору."
+    facts: { transport: tk, tk_contract: carriage, carriage_customer: buyer, loader: carrier, international: "no", tmc_accounting: yes, owner_escort: "no" }
+    expect: { rules: [R-004, R-107], roles: { shipper: buyer, consignee: buyer, loader: carrier }, form: paper_allowed }
+
+  # ---------- Кто подписывает: представитель грузополучателя (слой signers, словарь 0.6) ----------
+  # Роли не меняются; правило R-301 заменяет строку Т3 шаблона (поправка consignee_by_proxy).
+
+  - id: T-401
+    story: "Продавец нанял перевозчика; на выгрузке груз за покупателя принимает его 3PL-склад по поручению (G-050, C2 С6)."
+    facts: { transport: hired_carrier, carriage_customer: seller, international: "no", tmc_accounting: yes, owner_escort: "no", receiver_representative: yes }
+    expect: { rules: [R-003, R-301], carriage_doc: etrn, roles: { shipper: seller, consignee: buyer }, signs_patches: [consignee_by_proxy], form: electronic, certainty: clear }
+
+  - id: T-402
+    story: "То же, груз принимает сам покупатель."
+    facts: { transport: hired_carrier, carriage_customer: seller, international: "no", tmc_accounting: yes, owner_escort: "no", receiver_representative: "no" }
+    expect: { rules: [R-003], roles: { consignee: buyer }, signs_patches: [] }
+
+  - id: T-403
+    story: "Покупатель сам нанял перевозчика у поставщика, груз на выгрузке принимает его ответхранитель."
+    facts: { transport: hired_carrier, carriage_customer: buyer, international: "no", tmc_accounting: yes, owner_escort: "no", receiver_representative: yes }
+    expect: { rules: [R-004, R-301, R-107], roles: { shipper: buyer, consignee: buyer }, signs_patches: [consignee_by_proxy], form: paper_allowed }
+
+  - id: T-404
+    story: "Склад указан грузополучателем сам: продавец по указанию покупателя везёт на склад 3PL — склад подписывает Т3 от своего имени."
+    facts: { transport: hired_carrier, carriage_customer: seller, international: "no", tmc_accounting: yes, owner_escort: "no", consignee_party: third_party, receiver_representative: "no" }
+    expect: { rules: [R-003], roles: { consignee: third_party }, signs_patches: [] }
+
+  - id: T-405
+    story: "Покупатель забирает груз своей машиной, на его складе груз принимает 3PL: договора перевозки нет, титулов нет."
+    facts: { transport: own_buyer, international: "no", receiver_representative: yes }
+    expect: { rules: [R-002], carriage_doc: none, signs_patches: [] }
+
+  - id: T-406
+    story: "Экспедитор принял груз и отправил наёмным перевозчиком; у покупателя груз принимает его склад по доверенности."
+    facts: { transport: forwarder, forwarder_own_vehicles: "no", forwarder_takes_possession: yes, international: "no", tmc_accounting: yes, owner_escort: "no", receiver_representative: yes }
+    expect: { rules: [R-007, R-301], roles: { shipper: forwarder, consignee: buyer }, signs_patches: [consignee_by_proxy] }

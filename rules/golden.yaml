@@ -1,0 +1,782 @@
+# Золотой набор: реальные ситуации с форумов (бриф §4 «Золотой набор», §9, §10 этап 1).
+#
+# Как читать:
+# - source — площадка, ссылка, дата сообщения. Имена, ники, компании убраны; текст — пересказ.
+#   Страницы открыты 2026-09-23. Ответы на форумах — НЕ источник правил, только материал для тестов.
+# - facts — факты по словарю (VOCABULARY.md), которые прямо следуют из текста.
+#   assumed — факты, которые в тексте не сказаны, но очевидны из контекста (продажа товара → учёт ТМЦ,
+#   перевозка по РФ). Движок получает facts + assumed.
+# - legs — если в ситуации несколько плеч перевозки, у каждого свои факты и ожидание.
+# - expect — что возвращает движок по rules.yaml (проверяется так же, как tests.yaml).
+#   ask — какие факты движок обязан спросить, если их нет.
+# - verdict:
+#     answer    — база правил даёт ответ (в т. ч. «спорно» — certainty: disputed);
+#     ambiguous — «правила неоднозначны»: сценария нет в базе или нужна норма, которой нет в SOURCES.
+# - forum — что ответили на форуме относительно нашего ответа: agrees | contradicts | split | none.
+# - gap — чего не хватает базе правил; номер вопроса в QUESTIONS.md, если он заведён.
+# - text_facts — для проверки ИИ-слоя (этап 3): факты, прямо сказанные в тексте, но не нужные
+#   движку для ответа (или ситуация ambiguous). Движку не подаются; извлечь их — не ошибка,
+#   извлечь другое значение — уверенная ошибка.
+#
+# before_start: true — сообщение раньше 01.09.2026; в счёт критерия «≥30 ситуаций» не идёт,
+# добавлено ради сценариев, которых нет среди сентябрьских сообщений.
+
+situations:
+
+  # ---------- Бухонлайн ----------
+
+  - id: G-001
+    source: { site: "Бухонлайн, форум", url: "https://www.buhonline.ru/forum/index?g=posts&m=3524255", date: 2026-09-01 }
+    story: "Организация сдаёт груз крупной транспортной компании. ТК обещает оформлять ЭПД за отправителя, но в своей системе ЭДО отправитель документов не видит."
+    question: "Так можно?"
+    facts: { transport: hired_carrier, carriage_customer: seller }
+    assumed: { international: no, tmc_accounting: yes, owner_escort: no }
+    expect:
+      rules: [R-003]
+      carriage_doc: etrn
+      roles: { shipper: seller, carrier: carrier }
+      form: electronic
+      certainty: clear
+    verdict: answer
+    forum: agrees
+    notes: "Грузоотправитель — организация. Т1 подписывает она или её представитель по доверенности, в т. ч. машиночитаемой (ПП 931 прил. 1 п. 3 «а»; 63-ФЗ ст. 17.2, 17.5). Прямого запрета представителю-перевозчику нет; документы в любом случае оформляются от имени и с данными организации."
+
+  - id: G-002
+    source: { site: "Бухонлайн, форум", url: "https://www.buhonline.ru/forum/index?g=posts&t=873071", date: 2026-09-01 }
+    story: "Компания перепродаёт товар транзитом: груз идёт со склада поставщика прямо покупателю. ТК заказывает компания, оплачивает покупатель."
+    question: "Как заполнить ЭТрН, чтобы поставщик и покупатель не видели друг друга?"
+    facts: { transport: hired_carrier, carriage_customer: seller, loader: warehouse, consignee_party: customer_buyer }
+    assumed: { international: no, tmc_accounting: yes, owner_escort: no }
+    expect:
+      rules: [R-003]
+      carriage_doc: etrn
+      roles: { shipper: seller, consignee: buyer, loader: warehouse }
+      form: electronic
+    verdict: answer
+    forum: agrees
+    notes: "seller здесь — перепродавец: договор перевозки заключил он, поэтому он грузоотправитель (Устав ст. 2 ч. 1 п. 4). Кто платит — роли не определяет. Грузит поставщик перепродавца — для перевозки это третье лицо (loader: warehouse). Вопрос «скрыть участников» — вне объёма помощника."
+
+  - id: G-003
+    source: { site: "Бухонлайн, форум", url: "https://www.buhonline.ru/forum/index?g=posts&t=873129", date: 2026-09-02 }
+    story: "Перевозчик получил заказ и отдаёт перевозку другому перевозчику. Договора экспедиции нет. ЭТрН создаёт грузоотправитель."
+    text_facts: { transport: hired_carrier }
+    question: "Как указать в ЭТрН привлечённого перевозчика?"
+    facts: {}
+    verdict: ambiguous
+    forum: agrees
+    notes: "Перевозчик — сторона договора (Устав ст. 2 ч. 1 п. 13); привлечь другого можно, отвечает договорный (ГК ст. 313, 403; Пленум № 26 п. 9); в договоре с фактическим перевозчиком договорный выступает грузоотправителем (Обзор ВС от 20.12.2017 п. 11). Одна ЭТрН или две — нормы нет; по существу это может быть экспедиция (Пленум № 26 п. 26)."
+    gap: "Одна или две ЭТрН при привлечённом перевозчике — QUESTIONS №19 (unknown)."
+
+  - id: G-004
+    source: { site: "Бухонлайн, форум", url: "https://www.buhonline.ru/forum/index?g=posts&t=873122", date: 2026-09-02 }
+    story: "Продавец нанял ИП-перевозчика довезти груз покупателю-ООО. У ИП нет сервиса ЭТрН."
+    question: "Обязательна ли ЭТрН?"
+    facts: { transport: hired_carrier, carriage_customer: seller }
+    assumed: { international: no, tmc_accounting: yes, owner_escort: no }
+    expect:
+      rules: [R-003]
+      carriage_doc: etrn
+      roles: { shipper: seller, consignee: buyer, carrier: carrier }
+      form: electronic
+      certainty: clear
+    verdict: answer
+    forum: agrees
+
+  - id: G-005
+    source: { site: "Бухонлайн, форум", url: "https://www.buhonline.ru/forum/index?g=posts&t=873173", date: 2026-09-03 }
+    story: "Продавец отправляет груз через ТК, покупатель сам получает его в пункте выдачи ТК."
+    text_facts: { consignee_party: customer_buyer }
+    question: "Должен ли покупатель оформлять ЭТрН?"
+    facts: { transport: hired_carrier, carriage_customer: seller }
+    assumed: { international: no, tmc_accounting: yes, owner_escort: no }
+    expect:
+      rules: [R-003]
+      carriage_doc: etrn
+      roles: { shipper: seller, consignee: buyer }
+      form: electronic
+    verdict: answer
+    forum: agrees
+    notes: "Покупатель-организация — грузополучатель, подписывает Т3 (ПП 931 прил. 1 п. 3 «в»). Если покупатель — физлицо и груз для личных нужд, срабатывает R-104 (бумага допустима)."
+
+  - id: G-006
+    source: { site: "Бухонлайн, форум", url: "https://www.buhonline.ru/forum/index?g=posts&t=873413", date: 2026-09-08 }
+    story: "Небольшая типография развозит заказы своим транспортом. Доставка отдельно не оплачивается, но заказчик требует ЭТрН."
+    question: "Нужно ли оформлять ЭТрН?"
+    facts: { transport: own_seller, seller_paid_delivery: no }
+    assumed: { ownership_before_delivery: no, international: no }
+    expect: { rules: [R-001], carriage_doc: none, certainty: clear }
+    verdict: answer
+    forum: agrees
+    notes: "Один из участников в похожей ситуации всё равно оформляет бумажную ТТН — это его практика, не требование."
+
+  - id: G-007
+    source: { site: "Бухонлайн, форум", url: "https://www.buhonline.ru/forum/index?g=posts&t=873449", date: 2026-09-08 }
+    story: "Покупатель заключил договор перевозки, груз грузят на складе завода-изготовителя (поставщика)."
+    text_facts: { loader: seller }
+    question: "Кто формирует ЭТрН и подписывает титул 1 — грузоотправитель или лицо, осуществляющее погрузку?"
+    facts: { transport: hired_carrier, carriage_customer: buyer }
+    assumed: { international: no, tmc_accounting: yes, owner_escort: no }
+    expect:
+      rules: [R-004, R-107]
+      carriage_doc: etrn
+      roles: { shipper: buyer, consignee: buyer, loader: seller }
+      form: paper_allowed
+      certainty: clear
+    verdict: answer
+    forum: agrees
+    notes: "Т1 вправе подписать грузоотправитель, уполномоченное им лицо или лицо, осуществляющее погрузку (ПП 931 прил. 1 п. 3 «а»). Покупатель — и ГО, и ГП, поэтому по приказу № 262 бумага допустима; ЭТрН — если она предусмотрена договором перевозки."
+
+  - id: G-008
+    source: { site: "Бухонлайн, форум", url: "https://www.buhonline.ru/forum/index?g=posts&t=873579", date: 2026-09-13 }
+    story: "Поставщик возит товар своим транспортом, доставку выделяет в счёте отдельной строкой."
+    question: "Нужна ли ЭТрН? Может ли поставщик быть одновременно грузоотправителем и перевозчиком?"
+    facts: { transport: own_seller, seller_paid_delivery: yes }
+    assumed: { international: no }
+    expect: { rules: [R-011], carriage_doc: none, certainty: disputed }
+    verdict: answer
+    forum: split
+    notes: "На форуме ответы противоречат друг другу так же, как позиции в R-011 (суд против Минфина 2011)."
+
+  - id: G-009
+    source: { site: "Бухонлайн, форум", url: "https://www.buhonline.ru/forum/index?g=posts&t=873692", date: 2026-09-16 }
+    story: "Поставщик доставляет своей машиной и своим водителем; строка «доставка» есть в счёте и УПД."
+    question: "Обязаны ли оформлять ЭТрН?"
+    facts: { transport: own_seller, seller_paid_delivery: yes }
+    assumed: { international: no }
+    expect: { rules: [R-011], carriage_doc: none, certainty: disputed }
+    verdict: answer
+    forum: contradicts
+    notes: "Консультант форума считает договор смешанным и требует ЭТрН. Это одна из двух позиций в R-011, а не однозначный ответ."
+
+  - id: G-010
+    source: { site: "Бухонлайн, форум", url: "https://www.buhonline.ru/forum/index?g=posts&t=873738", date: 2026-09-16 }
+    story: "Товар везут со склада завода. Грузополучателем в ЭТрН указан дилер, а выгружают на стройке конечного покупателя. Покупатель в ЭПД не участвует."
+    text_facts: { consignee_party: third_party }
+    question: "Корректно ли заполнена ЭТрН?"
+    facts: {}
+    expect: { rules: [], ask: [transport] }
+    verdict: answer
+    forum: contradicts
+    notes: "Кто заключил договор перевозки — не сказано, движок спрашивает. Форум решает по моменту перехода права собственности. У нас грузополучатель — лицо, управомоченное на получение груза (Устав ст. 2 ч. 1 п. 5): его определяет договор перевозки (consignee_party), а не собственность."
+
+  - id: G-011
+    source: { site: "Бухонлайн, форум", url: "https://www.buhonline.ru/forum/index?g=posts&t=873746", date: 2026-09-17 }
+    story: "ИП нанимает ТК, чтобы перевезти купленный товар от поставщика до терминала. С терминала до своего склада везёт на арендованной машине."
+    text_facts: { consignee_party: terminal }
+    question: "Можно ли не оформлять ЭТрН, если ИП и отправитель, и получатель? Какие документы нужны на второе плечо?"
+    legs:
+      - name: "Поставщик → терминал ТК, договор перевозки заключил ИП"
+        facts: { transport: hired_carrier, carriage_customer: buyer }
+        assumed: { international: no, tmc_accounting: yes, owner_escort: no }
+        expect:
+          rules: [R-004, R-107]
+          carriage_doc: etrn
+          roles: { shipper: buyer, consignee: buyer }
+          form: paper_allowed
+      - name: "Терминал → склад ИП на арендованном ТС"
+        facts: {}
+        expect: { rules: [], ask: [transport] }
+    verdict: ambiguous
+    forum: split
+    notes: "Первое плечо: бумага допустима (ГО = ГП, приказ № 262), ЭТрН — если предусмотрена договором. Второе: движок спросит вид аренды — без экипажа ТС во владении ИП (own_buyer, R-002), с экипажем — R-017 (ТрН не нужна, спорно)."
+    gap: "Риск переквалификации аренды с экипажем — QUESTIONS №20."
+
+  - id: G-012
+    source: { site: "Бухонлайн, форум", url: "https://www.buhonline.ru/forum/index?g=posts&t=873790", date: 2026-09-18 }
+    story: "Товар по цепочке из четырёх компаний перепродаётся через двух посредников, а везут его напрямую от первого продавца к последнему покупателю."
+    question: "Кто оформляет ЭТрН?"
+    facts: {}
+    expect: { rules: [], ask: [transport] }
+    verdict: answer
+    forum: split
+    notes: "Движок спрашивает, чьим транспортом везут и кто заключил договор перевозки: грузоотправитель — сторона договора перевозки (Устав ст. 2 ч. 1 п. 4). Форум частично решает по переходу права собственности — это не наша опора."
+
+  - id: G-013
+    source: { site: "Бухонлайн, форум", url: "https://www.buhonline.ru/forum/index?g=posts&t=873861", date: 2026-09-21 }
+    story: "Поставщик везёт своим транспортом по договору поставки, покупатель возмещает транспортные расходы. Поставщик отказывается оформлять ЭТрН."
+    question: "Правомерен ли отказ?"
+    facts: { transport: own_seller, seller_paid_delivery: yes }
+    assumed: { international: no }
+    expect: { rules: [R-011], carriage_doc: none, certainty: disputed }
+    verdict: answer
+    forum: agrees
+
+  - id: G-014
+    source: { site: "Бухонлайн, форум", url: "https://www.buhonline.ru/forum/index?g=posts&t=873959", date: 2026-09-23, date_note: "на странице только время; дата выведена по номеру темы" }
+    story: "Отправитель указал адрес разгрузки, куда груз и привезли. Грузополучатель при подписании своего титула указал другой адрес, перевозчик ЭТрН тоже подписал."
+    question: "Что делать и как исправить?"
+    facts: {}
+    verdict: ambiguous
+    forum: none
+    notes: "По своей инициативе ГП адрес выгрузки исправить не может: он входит в «сведения о приеме груза грузополучателем» (ПП 931 п. 10 «в»; формат 5.01, табл. 13.5 `АдрВыгруз`). Исправление Т3 в остальной части — новым файлом с прежним УИД и повторным Т4 (прил. 1 п. 5 «к»)."
+    gap: "Слоя «исправления» в rules.yaml нет. По ответу ГИС об ошибке блок ПриемГрузГП исправлять можно, расхождение фиксируется отметкой ГП (ОтметГП) — QUESTIONS №21."
+
+  - id: G-015
+    source: { site: "Бухонлайн, форум", url: "https://www.buhonline.ru/forum/index?g=posts&t=873644", date: 2026-09-15 }
+    story: "ИП нанимал для перевозок самозанятого водителя на его машине и учитывал его чеки в расходах."
+    question: "Можно ли продолжать без ЭТрН?"
+    facts: {}
+    verdict: ambiguous
+    forum: agrees
+    notes: "Самозанятый без статуса ИП перевозчиком по Уставу быть не может (ст. 2 ч. 1 п. 13); штраф за предпринимательство без регистрации — исполнителю (КоАП ст. 14.1); с 01.03.2027 — без допуска нельзя на ТС тяжелее 3,5 т (520-ФЗ). Нужна ли ЭТрН по такому договору — нормы нет (заметка N-SELFEMP). ИП на НПД может быть перевозчиком."
+    gap: "QUESTIONS №22 (unknown для физлица без ИП)."
+
+  # ---------- nalog-nalog.ru ----------
+
+  - id: G-016
+    source: { site: "nalog-nalog.ru, вопросы под статьёй", url: "https://nalog-nalog.ru/dontknows/kto-yavlyaetsya-gruzootpravitelem-v-etrn/", date: 2026-09-15 }
+    story: "Компания по комплексному договору с владельцем груза хранит его, грузит и доставляет своим транспортом. Владелец считает, что грузоотправитель — компания."
+    question: "Мы грузоотправитель? Нужна ли ЭТрН?"
+    facts: { transport: forwarder, forwarder_own_vehicles: yes, forwarder_takes_possession: yes }
+    assumed: { international: no, tmc_accounting: yes, owner_escort: no }
+    expect:
+      rules: [R-016]
+      carriage_doc: etrn
+      roles: { shipper: client, carrier: forwarder }
+      certainty: disputed
+    verdict: answer
+    forum: split
+    notes: "R-016, спорно. По признакам договора (Пленум № 26 п. 26) это перевозка: владелец груза — грузоотправитель, компания — перевозчик. Форум: договора перевозки с самим собой нет, ЭТрН не нужна — это вторая позиция в R-016. Сам договор может быть и хранением с доставкой."
+    gap: "Ведомственной позиции нет — QUESTIONS №23."
+
+  - id: G-017
+    source: { site: "nalog-nalog.ru, вопросы под статьёй", url: "https://nalog-nalog.ru/dontknows/kto-yavlyaetsya-gruzootpravitelem-v-etrn/", date: 2026-09-09 }
+    story: "Отгрузка со склада поставщика. Покупатель заключил договор с экспедитором, грузят силами поставщика."
+    text_facts: { carriage_customer: buyer }
+    question: "Кого указать лицом, осуществляющим погрузку?"
+    facts: { transport: forwarder, loader: seller }
+    assumed: { international: no, tmc_accounting: yes, owner_escort: no }
+    expect: { rules: [], ask: [forwarder_takes_possession] }
+    verdict: answer
+    forum: agrees
+    notes: "Роли зависят от того, принимает ли экспедитор груз (R-007/R-008). ЛОП — поставщик (loader: seller), его движок берёт из факта."
+
+  - id: G-018
+    source: { site: "nalog-nalog.ru, вопросы под статьёй", url: "https://nalog-nalog.ru/dontknows/kto-yavlyaetsya-gruzootpravitelem-v-etrn/", date: 2026-09-02 }
+    story: "Грузоотправитель нанял экспедитора забрать товар на СВХ и отвезти в магазин. Экспедитор нанял перевозчика. Склад СВХ уже подписал титул 1."
+    text_facts: { forwarder_own_vehicles: "no" }
+    question: "Как оформить ЭТрН в цепочке грузоотправитель — экспедитор — склад?"
+    facts: { transport: forwarder, loader: warehouse }
+    verdict: ambiguous
+    forum: agrees
+    notes: "Экспедитор — R-007/R-008. Перевозка от СВХ после выпуска по отдельному договору — внутренняя, ЭТрН (КДПГ ст. 1: пункты по договору в РФ). Если это продолжение единого международного договора — CMR (КДПГ ст. 34)."
+    gap: "Уточнить у пользователя: отдельный договор от СВХ или единый международный — QUESTIONS №11."
+
+  - id: G-019
+    source: { site: "nalog-nalog.ru, форум", url: "https://nalog-nalog.ru/forum/izmeneniya-2026/kto-gruzopoluchatel-v-etrn-pri-dostavke-v-tk-klienta/", date: 2026-09-23 }
+    story: "Товар везут до терминала транспортной компании, с которой работает клиент."
+    text_facts: { consignee_party: terminal }
+    question: "Кого указать грузополучателем при доставке до ТК?"
+    facts: {}
+    verdict: ambiguous
+    forum: none
+    notes: "Грузополучатель — лицо, управомоченное на получение груза по договору перевозки (Устав ст. 2 ч. 1 п. 5). Сценария «доставка до терминала следующего перевозчика или экспедитора» в базе нет."
+    gap: "Кто ГП на плече до терминала ТК — QUESTIONS №24 (unknown)."
+
+  - id: G-020
+    source: { site: "nalog-nalog.ru, форум", url: "https://nalog-nalog.ru/forum/izmeneniya-2026/etrn-otpravka/", date: 2026-09-21 }
+    story: "ИП сам отвозит груз на терминал крупной ТК. Доставку от терминала до покупателя заказывает и оплачивает покупатель."
+    text_facts: { consignee_party: terminal }
+    question: "Какие документы нужны?"
+    legs:
+      - name: "Склад ИП → терминал ТК своим транспортом"
+        facts: { transport: own_seller, seller_paid_delivery: no }
+        assumed: { international: no }
+        expect: { rules: [], ask: [ownership_before_delivery] }
+      - name: "Терминал → покупатель, договор заключил покупатель"
+        facts: { transport: hired_carrier, carriage_customer: buyer }
+        assumed: { international: no, tmc_accounting: yes, owner_escort: no }
+        expect: { rules: [R-004, R-107], carriage_doc: etrn, roles: { shipper: buyer }, form: paper_allowed }
+    verdict: ambiguous
+    forum: split
+    notes: "Первое плечо: зависит от того, перешло ли право собственности к покупателю до доставки на терминал (R-001 или R-011). Второе: грузоотправитель — покупатель, если договор заключил он; крупные ТК часто действуют как экспедиторы — тогда R-007/R-008."
+    gap: "Многоплечевая перевозка — QUESTIONS №24."
+
+  - id: G-021
+    source: { site: "nalog-nalog.ru, форум", url: "https://nalog-nalog.ru/forum/izmeneniya-2026/mogut-li-v-upd-i-etrn-stoyat-raznye-organizacii-v-pole-gruzootpravitel/", date: 2026-09-20 }
+    story: "В перевозке участвовал экспедитор. В ЭТрН грузоотправителем стоит экспедитор, в УПД — сама компания."
+    question: "Могут ли в УПД и ЭТрН быть разные грузоотправители?"
+    facts: { transport: forwarder }
+    assumed: { international: no, tmc_accounting: yes, owner_escort: no }
+    expect: { rules: [], ask: [forwarder_takes_possession] }
+    verdict: answer
+    forum: contradicts
+    notes: "Если экспедитор принял груз, он грузоотправитель в ЭТрН с отметкой «является экспедитором», клиент — в сведениях о заказчике (R-007: 87-ФЗ ст. 4 п. 4.1). Расхождение с УПД тогда законно. Ответ на форуме дал вендор бухгалтерского сервиса: грузоотправители расходиться не могут."
+
+  - id: G-022
+    source: { site: "nalog-nalog.ru, форум", url: "https://nalog-nalog.ru/forum/izmeneniya-2026/scenarij-zapolneniya-elektronnoj-transportnoj-nakladnoj/", date: 2026-09-16 }
+    story: "Транзит: поставщик нанимает и оплачивает перевозчика, тот везёт товар сразу клиенту перепродавца."
+    question: "Как оформить ЭТрН?"
+    facts: { transport: hired_carrier, carriage_customer: seller, consignee_party: third_party }
+    assumed: { international: no, tmc_accounting: yes, owner_escort: no }
+    expect:
+      rules: [R-003]
+      carriage_doc: etrn
+      roles: { shipper: seller, consignee: third_party }
+      form: electronic
+    verdict: answer
+    forum: agrees
+    notes: "Грузоотправитель — поставщик (заключил договор перевозки). Грузополучатель — клиент перепродавца, которому груз выдаётся по указанию поставщика (Устав ст. 2 ч. 1 п. 5)."
+
+  - id: G-023
+    source: { site: "nalog-nalog.ru, форум", url: "https://nalog-nalog.ru/forum/buhuchet-dlya-chajnikov/etrn-i-sdek/", date: 2026-09-23 }
+    story: "ООО нанятым транспортом возит заказы на сортировочный центр службы доставки, дальше она развозит их по стране."
+    question: "Нужна ли ЭТрН и кто грузополучатель?"
+    facts: { transport: hired_carrier, carriage_customer: seller, consignee_party: terminal }
+    assumed: { international: no, tmc_accounting: yes, owner_escort: no }
+    expect: { rules: [R-003], carriage_doc: etrn, roles: { shipper: seller }, certainty: unknown }
+    verdict: ambiguous
+    forum: none
+    notes: "ЭТрН нужна (R-003: договор перевозки заключило ООО). Кто грузополучатель на плече до сортировочного центра, база не отвечает. Ответ на форуме дал вендор."
+    gap: "Многоплечевая перевозка, грузополучатель на терминале — QUESTIONS №24."
+
+  - id: G-024
+    source: { site: "nalog-nalog.ru, форум", url: "https://nalog-nalog.ru/forum/izmeneniya-2026/obyazatelnye-epd-s-01-09-2026/", date: 2026-09-02 }
+    story: "Компания сама и грузоотправитель, и грузополучатель, нанимает перевозчиков для доставки и закупки."
+    text_facts: { consignee_party: customer_itself }
+    question: "Обязательны ли электронные заказы-заявки или достаточно ЭТрН?"
+    facts: { transport: hired_carrier, carriage_customer: company }
+    assumed: { international: no, tmc_accounting: yes, owner_escort: no }
+    expect:
+      rules: [R-006, R-107]
+      carriage_doc: etrn
+      roles: { shipper: company, consignee: company }
+      form: paper_allowed
+    verdict: answer
+    forum: contradicts
+    notes: "Эксперт форума считает, что исключения приказа № 262 не подходят. Для ТрН в случае ГО = ГП бумага допустима (приказ № 262). Заказ-заявка — другой ЭПД, вне объёма (PARKING)."
+
+  # ---------- Клерк ----------
+
+  - id: G-025
+    source: { site: "Клерк, форум", url: "https://club.klerk.ru/t/elektronnaya-transportnaya-nakladnaya-ne-hochu-zapolnyat/1264516", date: 2026-09-14 }
+    story: "Продавец-ИП не хочет подключаться к ЭДО. Товар везёт другой ИП на своём транспорте. Потом продавец предлагает арендовать склад у покупателя и везти груз «к себе»."
+    question: "Можно ли переложить оформление ЭТрН на перевозчика? Поможет ли аренда склада у покупателя?"
+    facts: { transport: hired_carrier, carriage_customer: seller }
+    assumed: { international: no, tmc_accounting: yes, owner_escort: no }
+    expect: { rules: [R-003], carriage_doc: etrn, roles: { shipper: seller }, form: electronic }
+    verdict: answer
+    forum: split
+    notes: "Т1 подписывает грузоотправитель или его представитель по доверенности, в т. ч. перевозчик (ПП 931 прил. 1 п. 3 «а»; 63-ФЗ ст. 17.2; QUESTIONS №17). Схема с арендой склада формально даёт ГО = ГП (R-006 + R-107); помощник её не оценивает, но предупреждает о притворных сделках (заметка N-SHAM: ГК ст. 170, Пленум ВС № 25 пп. 86–88)."
+
+  - id: G-026
+    source: { site: "Клерк, форум", url: "https://club.klerk.ru/t/etrn-kak-pravilno-sdelat/1264459", date: 2026-09-07 }
+    story: "Нужно забрать у поставщика в другом городе около килограмма краски. Своего транспорта нет, сотрудник поедет общественным транспортом или на личной машине по доверенности."
+    question: "Как забрать товар без ЭТрН?"
+    facts: { transport: no_contract }
+    assumed: { international: no }
+    expect: { rules: [R-015], carriage_doc: none, certainty: clear }
+    verdict: answer
+    forum: agrees
+    notes: "Договор перевозки груза не заключается, поэтому ТрН не нужна (ТрН подтверждает договор перевозки — Устав ст. 2 ч. 1 п. 20, ст. 8 ч. 1)."
+
+  - id: G-027
+    source: { site: "Клерк, форум", url: "https://club.klerk.ru/t/etrn-tranzit/1264458", date: 2026-09-07 }
+    story: "Покупатель-ООО забирает товар не со склада продавца, а с завода третьего лица. Перевозку заказывает сам покупатель."
+    text_facts: { consignee_party: customer_itself, loader: warehouse }
+    question: "Кого указывать грузоотправителем?"
+    facts: { transport: hired_carrier, carriage_customer: buyer, loader: warehouse }
+    assumed: { international: no, tmc_accounting: yes, owner_escort: no }
+    expect:
+      rules: [R-004, R-107]
+      carriage_doc: etrn
+      roles: { shipper: buyer, consignee: buyer, loader: warehouse }
+      form: paper_allowed
+    verdict: answer
+    forum: agrees
+    notes: "Грузоотправитель — покупатель. ЛОП — завод третьего лица (loader: warehouse)."
+
+  - id: G-028
+    source: { site: "Клерк, форум", url: "https://club.klerk.ru/t/ekspedirovanie-roli/1264445", date: 2026-09-04 }
+    story: "Продавец отправляет груз через ТК-экспедитора, договор экспедиции заключил продавец. Право собственности переходит при передаче груза ТК, услуги оплачивает покупатель."
+    text_facts: { ownership_before_delivery: "yes" }
+    question: "Кто клиент экспедитора и кто что подписывает?"
+    facts: { transport: forwarder }
+    assumed: { international: no, tmc_accounting: yes, owner_escort: no }
+    expect: { rules: [], ask: [forwarder_takes_possession] }
+    verdict: answer
+    forum: split
+    notes: "Клиент экспедитора — сторона договора экспедиции, то есть продавец (ГК ст. 801). Кто грузоотправитель: при приёме груза — экспедитор (R-007), без приёма — клиент (R-008). Собственность и оплата роли не определяют. На форуме один ответ ставит грузоотправителем собственника — это расходится с Уставом ст. 2 ч. 1 п. 4."
+
+  - id: G-029
+    source: { site: "Клерк, форум", url: "https://club.klerk.ru/t/ettn-u-posrednika/1264423", date: 2026-09-03 }
+    story: "Дилер продаёт товар производителя. Производитель нанимает перевозчика и везёт груз напрямую конечному клиенту, минуя склад дилера."
+    question: "Как посреднику оформить ЭТрН?"
+    facts: { transport: hired_carrier, carriage_customer: seller, consignee_party: third_party }
+    assumed: { international: no, tmc_accounting: yes, owner_escort: no }
+    expect: { rules: [R-003], carriage_doc: etrn, roles: { shipper: seller, consignee: third_party }, form: electronic }
+    verdict: answer
+    forum: split
+    notes: "Грузоотправитель — производитель, дилер в ЭТрН не участвует. Грузополучатель — конечный клиент дилера (Устав ст. 2 ч. 1 п. 5)."
+
+  - id: G-030
+    source: { site: "Клерк, комментарий к новости", url: "https://club.klerk.ru/t/sotrudniki-rostransnadzora-nachali-proveryat-etrn/1264443", date: 2026-09-10 }
+    story: "Покупатель-ИП получает от поставщика моющие средства, подписывает УПД через ЭДО."
+    question: "Касается ли его ЭТрН?"
+    facts: {}
+    expect: { rules: [], ask: [transport] }
+    verdict: answer
+    forum: agrees
+    notes: "Ответ зависит от того, чьим транспортом везут и оплачивается ли доставка отдельно — движок спрашивает."
+
+  - id: G-031
+    source: { site: "Клерк, «Консультации»", url: "https://www.klerk.ru/consultations/etrn-pri-dostavke-sobstvennym-transportom-66951/", date: 2026-09-15, date_note: "на странице «15 сент.», год выведен по номеру вопроса" }
+    story: "Продавец доставляет товар бюджетному покупателю своим транспортом. В договоре сказано, что стоимость доставки включена в цену."
+    question: "Нужна ли ЭТрН?"
+    facts: { transport: own_seller, seller_paid_delivery: no }
+    assumed: { ownership_before_delivery: no, international: no }
+    expect: { rules: [R-001], carriage_doc: none, certainty: clear }
+    verdict: answer
+    forum: contradicts
+    notes: "Эксперт площадки: упоминание доставки в договоре делает её платной услугой, ЭТрН нужна. Это противоречит другому разбору той же площадки (G-033) и ответам Минтранса."
+
+  - id: G-032
+    source: { site: "Клерк, разбор вопроса читателя", url: "https://www.klerk.ru/buh/news/709288/", date: 2026-09-17 }
+    story: "Покупатель нанимает транспортную компанию, чтобы вывезти товар со склада поставщика."
+    question: "Нужна ли ЭТрН и кто грузоотправитель?"
+    facts: { transport: hired_carrier, carriage_customer: buyer }
+    assumed: { international: no, tmc_accounting: yes, owner_escort: no }
+    expect:
+      rules: [R-004, R-107]
+      carriage_doc: etrn
+      roles: { shipper: buyer, consignee: buyer, loader: seller }
+      form: paper_allowed
+    verdict: answer
+    forum: contradicts
+    notes: "Роли совпадают с разбором. Разбор допускает бумагу только при перемещении между своими объектами; приказ № 262 говорит шире — ГО и ГП одно лицо."
+
+  - id: G-033
+    source: { site: "Клерк, разбор вопроса читателя", url: "https://www.klerk.ru/buh/news/707662/", date: 2026-09-07 }
+    story: "Поставщик доставляет товар покупателям своим транспортом по договору поставки."
+    question: "Нужна ли ЭТрН?"
+    facts: { transport: own_seller, seller_paid_delivery: no }
+    assumed: { ownership_before_delivery: no, international: no }
+    expect: { rules: [R-001], carriage_doc: none, certainty: clear }
+    verdict: answer
+    forum: agrees
+
+  - id: G-034
+    source: { site: "Клерк, блог площадки, разбор вопроса", url: "https://www.klerk.ru/blogs/klerksystem/707026/", date: 2026-09-01 }
+    story: "ИП перевозит свой груз между своими объектами через нанятую транспортно-экспедиционную компанию, которая документы не оформляет."
+    question: "Нужна ли транспортная накладная?"
+    facts: { transport: forwarder, consignee_party: customer_itself }
+    assumed: { international: no, tmc_accounting: yes, owner_escort: no }
+    expect: { rules: [], ask: [forwarder_takes_possession] }
+    verdict: answer
+    forum: split
+    notes: "Движок спрашивает, принимает ли экспедитор груз и везёт ли сам. Без приёма (R-008): ГО и ГП — сам ИП, бумага допустима (приказ № 262 п. 7). С приёмом (R-007): ГО — экспедитор, ГП — ИП, исключение не срабатывает, нужна ЭТрН (Устав ст. 2 ч. 1 п. 4; 87-ФЗ ст. 4 п. 4.1; Пленум № 26 пп. 27–28). Разбор на площадке этого различия не делает."
+
+  - id: G-035
+    source: { site: "Клерк, пост пользователя", url: "https://www.klerk.ru/user/2113699/708445/", date: 2026-09-10 }
+    story: "Доставка включена в цену товара, но везёт сторонняя ТК по договору с продавцом."
+    text_facts: { seller_paid_delivery: "no" }
+    question: "Нужна ли ЭТрН?"
+    facts: { transport: hired_carrier, carriage_customer: seller }
+    assumed: { international: no, tmc_accounting: yes, owner_escort: no }
+    expect: { rules: [R-003], carriage_doc: etrn, form: electronic, certainty: clear }
+    verdict: answer
+    forum: agrees
+
+  # ---------- ATI.SU ----------
+
+  - id: G-036
+    source: { site: "ATI.SU, форум", url: "https://forums.ati.su/forum/Topic.aspx?forumid=1014&topicid=2c0f1e0f-c7a5-f111-bbc7-0cc47af31075", date: 2026-09-01 }
+    story: "Продавец развозит мелкие партии по области, 9–10 точек в день. Возит ИП на своём ТС по договору транспортных услуг, заказчик — продавец."
+    question: "Можно ли вместо этого заключить аренду ТС с экипажем и не оформлять ЭТрН?"
+    facts: { transport: hired_carrier, carriage_customer: seller }
+    assumed: { international: no, tmc_accounting: yes, owner_escort: no }
+    expect: { rules: [R-003], carriage_doc: etrn, roles: { shipper: seller }, form: electronic }
+    verdict: answer
+    forum: split
+    notes: "Нынешняя схема — договор перевозки, ЭТрН нужна. Если получатели — физлица для личных нужд, срабатывает R-104. Про аренду с экипажем база правил не отвечает."
+    gap: "Аренда ТС с экипажем — QUESTIONS №20."
+
+  - id: G-037
+    source: { site: "ATI.SU, форум", url: "https://forums.ati.su/forum/Topic.aspx?forumid=1014&topicid=2c0f1e0f-c7a5-f111-bbc7-0cc47af31075", date: 2026-09-01 }
+    story: "Перевозчик-ИП по заказу мебельного магазина (ИП) развозит мебель покупателям-физлицам, несколько адресов в день."
+    question: "Подпадает ли это под исключение для физлиц, если магазин и перевозчик — предприниматели?"
+    facts: { transport: hired_carrier, carriage_customer: seller, exc_individual_consignee: yes }
+    assumed: { international: no, tmc_accounting: yes, owner_escort: no }
+    expect: { rules: [R-003, R-113], carriage_doc: etrn, form: paper_allowed, certainty: disputed }
+    verdict: answer
+    forum: agrees
+    notes: "Гражданин здесь только грузополучатель: перевозку заказал магазин. По тексту п. 4 приказа № 262 («грузоотправителем и (или) грузополучателем») бумага допустима, но есть прочтение, что услуга оказывается только заказчику, — спорно (R-113; research/2026-09_paper/REPORT.md, В5). ЭТрН — если предусмотрена договором."
+
+  - id: G-038
+    source: { site: "ATI.SU, форум", url: "https://forums.ati.su/forum/Topic.aspx?forumid=1014&topicid=1a7fa86a-7faa-f111-bbc7-0cc47af31075", date: 2026-09-07 }
+    story: "Экспедитор принимает груз во владение и указан грузоотправителем. Отгрузка идёт со стороннего склада ответственного хранения."
+    question: "Кого указывать лицом, осуществляющим погрузку: себя или склад?"
+    facts: { transport: forwarder, forwarder_takes_possession: yes, loader: warehouse }
+    assumed: { forwarder_own_vehicles: no, international: no, tmc_accounting: yes, owner_escort: no }
+    expect: { rules: [R-007], carriage_doc: etrn, roles: { shipper: forwarder, loader: warehouse }, forwarder_mark: true, form: electronic }
+    verdict: answer
+    forum: agrees
+    notes: "ЛОП — склад (loader: warehouse); Т1 вправе подписать и лицо, осуществляющее погрузку (ПП 931 прил. 1 п. 3 «а»). Утверждение форума «за погрузку по закону отвечает ГО» не проверено."
+
+  - id: G-039
+    source: { site: "ATI.SU, форум", url: "https://forums.ati.su/forum/Topic.aspx?forumid=1014&topicid=7946934e-90a7-f111-bbc7-0cc47af31075&page=3", date: 2026-09-10 }
+    story: "Экспедитор груз во владение не принимает, ЭТрН оформляет заказчик-грузовладелец и видит ставку перевозчика."
+    question: "Обязан ли заказчик работать по схеме, где экспедитор принимает груз и сам оформляет ЭТрН?"
+    facts: { transport: forwarder, forwarder_own_vehicles: no, forwarder_takes_possession: no }
+    assumed: { international: no, tmc_accounting: yes, owner_escort: no }
+    expect: { rules: [R-008], carriage_doc: etrn, roles: { shipper: client }, form: electronic }
+    verdict: answer
+    forum: agrees
+    notes: "Без приёма груза грузоотправитель — клиент (87-ФЗ ст. 4 п. 4.1 подп. 2). Выбор схемы — вопрос договора, а не нормы."
+
+  - id: G-040
+    source: { site: "ATI.SU, форум", url: "https://forums.ati.su/forum/Topic.aspx?forumid=1014&topicid=8b81611e-2fa1-f111-bbc7-0cc47af31075&page=2", date: 2026-09-01 }
+    story: "Заказчик обращается к экспедитору, тот находит перевозчика."
+    question: "Может ли экспедитор заключить договор с перевозчиком от своего имени?"
+    facts: { transport: forwarder }
+    assumed: { international: no, tmc_accounting: yes, owner_escort: no }
+    expect: { rules: [], ask: [forwarder_takes_possession] }
+    verdict: answer
+    forum: agrees
+    notes: "Может — только если принимает груз (87-ФЗ ст. 4 п. 4.1 подп. 1); без приёма договор перевозки заключается от имени клиента (подп. 2). Движок спрашивает про приём груза."
+
+  - id: G-041
+    source: { site: "ATI.SU, форум", url: "https://forums.ati.su/forum/Topic.aspx?forumid=1014&topicid=8b81611e-2fa1-f111-bbc7-0cc47af31075&page=4", date: 2026-09-03 }
+    story: "Экспедитор подписывает электронную заявку, но груз во владение не принимает. В Т1 ставит реального грузоотправителя, в сведениях о перевозчике — реального перевозчика."
+    question: "Обязан ли он выдавать экспедиторскую расписку? Правильно ли так оформлять?"
+    facts: { transport: forwarder, forwarder_own_vehicles: no, forwarder_takes_possession: no }
+    assumed: { international: no, tmc_accounting: yes, owner_escort: no }
+    expect: { rules: [R-008], carriage_doc: etrn, roles: { shipper: client } }
+    verdict: answer
+    forum: split
+    notes: "Роли по R-008 совпадают с его схемой. Как ему получать оплату — вне объёма помощника."
+
+  - id: G-042
+    source: { site: "ATI.SU, форум", url: "https://forums.ati.su/forum/Topic.aspx?forumid=1014&topicid=8b81611e-2fa1-f111-bbc7-0cc47af31075&page=5", date: 2026-09-05 }
+    story: "Самовывоз: покупатель (он же получатель) нанимает перевозчика, указывает себя грузоотправителем, поставщика — лицом, осуществляющим погрузку. На погрузке покупатель не присутствует."
+    question: "Законна ли такая схема?"
+    facts: { transport: hired_carrier, carriage_customer: buyer, loader: seller }
+    assumed: { international: no, tmc_accounting: yes, owner_escort: no }
+    expect:
+      rules: [R-004, R-107]
+      carriage_doc: etrn
+      roles: { shipper: buyer, consignee: buyer, loader: seller }
+      form: paper_allowed
+      certainty: clear
+    verdict: answer
+    forum: agrees
+
+  - id: G-043
+    source: { site: "ATI.SU, форум", url: "https://forums.ati.su/forum/Topic.aspx?forumid=1014&topicid=d5f2d3be-e4a5-f111-bbc7-0cc47af31075", date: 2026-09-01 }
+    story: "Компания приняла груз как грузополучатель и дальше развозит его своим клиентам на «газелях»; часть клиентов к ЭТрН не готова."
+    text_facts: { transport: own_seller }
+    question: "Как возить на «газелях» больше 700 кг, нужны ли заявки и бумажные дубли, как быть с неготовыми клиентами?"
+    facts: {}
+    expect: { rules: [], ask: [transport] }
+    verdict: answer
+    forum: split
+    notes: "Масса и тип ТС на необходимость ЭТрН не влияют (заметка N-MASS, Q&A 2.3). Нужна ли ЭТрН при развозе — зависит от того, чьим транспортом (движок спрашивает). Заявки — вне объёма (PARKING)."
+
+  - id: G-044
+    source: { site: "ATI.SU, форум", url: "https://forums.ati.su/forum/Topic.aspx?forumid=1014&topicid=d5297c3d-3fac-f111-bbc7-0cc47af31075", date: 2026-09-16 }
+    story: "Заказчики-экспедиторы дают перевозчику, помимо ЭТрН, бумажную накладную, где перевозчиком указаны они сами с машиной и водителем перевозчика, и требуют её подписать."
+    text_facts: { transport: forwarder }
+    question: "Законно ли это?"
+    facts: {}
+    verdict: ambiguous
+    forum: split
+    notes: "Перевозчик — лицо, принявшее на себя обязанность перевезти груз по договору перевозки (Устав ст. 2 ч. 1 п. 13). Запрет одновременной бумаги и ЭТрН — позиция Минтранса, нормы не нашли (QUESTIONS №13)."
+    gap: "Кто перевозчик, если экспедитор привлёк перевозчика от своего имени — QUESTIONS №19."
+
+  - id: G-045
+    source: { site: "ATI.SU, форум", url: "https://forums.ati.su/forum/Topic.aspx?forumid=1014&topicid=d5297c3d-3fac-f111-bbc7-0cc47af31075&page=2", date: 2026-09-18 }
+    story: "Экспедитор указал себя в ЭТрН перевозчиком с машиной и водителем перевозчика-ИП и подписал за водителя. Аренды ТС не было."
+    text_facts: { transport: forwarder, forwarder_own_vehicles: "no" }
+    question: "Разрешено ли это и какие риски у перевозчика?"
+    facts: {}
+    verdict: ambiguous
+    forum: split
+    notes: "Т2 подписывает перевозчик; водитель может подписать ПЭП или УНЭП при последующей подписи перевозчика (ПП 931 прил. 1 п. 3 «б»). Подписывать за водителя норма не предусматривает. Кто перевозчик — см. QUESTIONS №19."
+    gap: "QUESTIONS №19."
+
+  - id: G-046
+    source: { site: "ATI.SU, форум", url: "https://forums.ati.su/forum/Topic.aspx?forumid=1014&topicid=8b81611e-2fa1-f111-bbc7-0cc47af31075&page=6", date: 2026-09-08 }
+    story: "Клиенты и грузополучатели ещё не настроили ЭТрН и просят ехать по бумаге: мол, до марта штрафов не будет."
+    question: "Можно ли так работать?"
+    facts: {}
+    expect: { rules: [], ask: [transport] }
+    verdict: answer
+    forum: agrees
+    notes: "Бумага допустима только в случаях приказа № 262 (движок проверяет исключения). «До марта» — поручение Президента Пр-1784 п. 6 об устных замечаниях на дороге; это не норма и не отменяет обязанность по 140-ФЗ."
+
+  # ---------- C2: транспортные компании, сборные грузы, возврат, приёмка представителем (25.09.2026) ----------
+  # Разбор норм — research/2026-09_demand/candidates/C2_roles_wider.md (С1, С2, С5, С6). Записаны на текущем
+  # словаре; чего не хватает — в gap.
+
+  - id: G-047
+    source: { site: "nalog-nalog.ru, форум", url: "https://nalog-nalog.ru/forum/izmeneniya-2026/dostavka-gruza-pekom/", date: 2026-09-22 }
+    story: "Поставщик своими силами привёз груз на терминал крупной ТК и сдал его в адрес получателя. Услуги ТК оплачивает получатель. В ЭДО по перевозке ничего не пришло, бухгалтерия получателя требует поручение экспедитору и экспедиторскую расписку."
+    text_facts: { forwarder_takes_possession: yes }
+    question: "Что делать?"
+    legs:
+      - name: "Склад поставщика → терминал ТК своим транспортом"
+        facts: { transport: own_seller }
+        assumed: { international: no }
+        expect: { rules: [], ask: [seller_paid_delivery] }
+      - name: "Терминал → получатель: ТК-экспедитор приняла груз"
+        facts: { forwarder_takes_possession: yes }
+        assumed: { transport: forwarder, international: no, tmc_accounting: yes, owner_escort: no }
+        expect: { rules: [], ask: [forwarder_own_vehicles], fwd_rules: [R-201, R-202], forwarding_docs: [epe, eer] }
+    verdict: answer
+    forum: split
+    notes: "Экспедиторская расписка — один файл экспедитора, подписи клиента в ней нет; поручение формирует клиент экспедитора, согласует экспедитор (ПП 469 прил. 1 п. 3, прил. 2 п. 3; R-201, R-202). Поставщик, не заключавший договор экспедиции, в обмене не участвует (ПП 469 п. 2). Форум верно описал расписку, но «заказчиком может быть любой участник перевозки» — не по норме: клиент — сторона договора экспедиции. Кто заключил договор с ТК (получатель как плательщик или поставщик), в тексте не сказано."
+    gap: "Сценарий ЭТрН зависит от forwarder_own_vehicles (R-016 — спорно); экспедиторские документы движок выводит и без него (словарь 0.4). Вид договора с ТК — вопрос tk_contract (словарь 0.5); плечи — проходом по частям."
+
+  - id: G-048
+    source: { site: "Бухонлайн, форум", url: "https://www.buhonline.ru/forum/index?g=posts&t=873022", date: 2026-09-02 }
+    story: "Компания только сдаёт груз в ТК, доставку оплачивает получатель. Все ТК требуют от неё экспедиторскую расписку на сдачу и на получение груза, хотя договоров экспедиции она не подписывала; приходится заключать договоры со всеми ТК."
+    text_facts: { forwarder_takes_possession: yes }
+    question: "Кто оформляет экспедиторскую расписку?"
+    facts: { forwarder_takes_possession: yes }
+    assumed: { transport: forwarder, international: no, tmc_accounting: yes, owner_escort: no }
+    expect: { rules: [], ask: [forwarder_own_vehicles], fwd_rules: [R-201, R-202], forwarding_docs: [epe, eer] }
+    verdict: answer
+    forum: split
+    notes: "Расписку формирует и подписывает только экспедитор, выдаёт клиенту (ПП 469 прил. 2 п. 3; ПП 554 п. 12; R-202). Отправитель без договора экспедиции не участник обмена (ПП 469 п. 2) — требование «расписки от отправителя» нормам не соответствует. От клиента ТК может требовать только поручение (R-201). Один участник ветки ответил так же, другой подписал расписку сам, заполнив договор «из головы»."
+    gap: "Сценарий ЭТрН — как в G-047; ответ про ЭЭР движок даёт без него (словарь 0.4)."
+
+  - id: G-049
+    source: { site: "Бухонлайн, форум", url: "https://www.buhonline.ru/forum/index?g=posts&t=873938", date: 2026-09-23 }
+    story: "Получатель (принципал по агентскому договору) получил бумажные экспедиторские расписки. Агент ответил, что для сборного груза ЭТрН не оформляется: на плече между терминалами её не будет, только на доставке от терминала в городе назначения."
+    question: "Насколько обоснована такая позиция?"
+    legs:
+      - name: "Магистраль терминал → терминал, если ТК-экспедитор нанимает перевозчика"
+        facts: { transport: hired_carrier, carriage_customer: forwarder, consignee_party: shipper_itself }
+        assumed: { forwarder_takes_possession: yes, international: no, tmc_accounting: yes, owner_escort: no }
+        expect: { rules: [R-007, R-107], carriage_doc: etrn, roles: { shipper: forwarder, consignee: forwarder }, form: paper_allowed }
+      - name: "Магистраль, если ТК везёт своими машинами"
+        facts: { transport: forwarder, forwarder_own_vehicles: yes }
+        assumed: { international: no, tmc_accounting: yes, owner_escort: no }
+        expect: { rules: [R-016], carriage_doc: etrn, certainty: disputed }
+      - name: "Терминал назначения → получатель, наёмный перевозчик"
+        facts: { transport: hired_carrier, carriage_customer: forwarder }
+        assumed: { forwarder_takes_possession: yes, international: no, tmc_accounting: yes, owner_escort: no }
+        expect: { rules: [R-007], carriage_doc: etrn, roles: { shipper: forwarder, consignee: buyer }, form: electronic }
+    verdict: answer
+    forum: agrees
+    notes: "Норм, выводящих сборный груз из-под ТрН, нет (Устав, ПП 931, приказ № 262, 87-ФЗ, ПП 469). На магистрали с наёмным перевозчиком ГО и ГП — сама ТК-экспедитор, поэтому допустима бумажная ТрН (приказ № 262 п. 7), но ТрН нужна. Своими машинами ТК — спорно (R-016). Экспедиторские документы с 01.09.2026 — электронные (87-ФЗ ст. 2 п. 3), бумага — только в случаях приказа № 115. Одна ЭТрН на много клиентов — только разъяснение Минтранса (Q&A 2.8), нормы нет. Ответ на форуме совпадает."
+    gap: "Разбор по плечам ТК — проходом по частям; магистраль глазами ТК опросник не разбирает; одна ЭТрН на сборный груз — QUESTIONS №13, №36."
+
+  - id: G-050
+    source: { site: "ATI.SU, форум", url: "https://forums.ati.su/forum/Topic.aspx?forumid=1112&topicid=a8bb2994-48a8-f111-bbc7-0cc47af31075", date: 2026-09-04 }
+    story: "Перевозчик приехал на выгрузку, получатель должен принять груз по QR-коду. Но получатель далеко и поручил приёмку другой фирме, которая принимает только по бумажным накладным. Перевозчику предлагают выгрузиться по бумаге, а ЭТрН получатель «закроет удалённо»."
+    text_facts: { transport: hired_carrier }
+    question: "Зачем ЭТрН, если на выгрузке нельзя принять электронно?"
+    facts: {}
+    verdict: ambiguous
+    forum: split
+    notes: "ГП — лицо, управомоченное на получение по договору перевозки; фирма, принимающая по его поручению, — представитель (Устав ст. 2 ч. 1 п. 5). Т3 подписывает ГП или уполномоченное им лицо (ПП 931 прил. 1 п. 3 «в»); представителем юрлица может быть другое юрлицо, подписывает его работник по доверенности (63-ФЗ ст. 17.2). Нормы о личном присутствии подписанта на выгрузке нет, но Т3 удостоверяет фактический приём, достоверность подтверждает подписавший (ПП 931 п. 11). «ГП не может принять электронно» среди случаев приказа № 262 нет. Кто отвечает, если Т3 подписан по сведениям представителя, — норм и практики не нашли. Форум: «аннулировать и завести новую ЭТрН» и «выставить простой»."
+    gap: "Т3 по доверенности — вопрос receiver_representative, правило R-301 (с 0.6). Кто нанял перевозчика, из рассказа не видно; кто отвечает, если Т3 подписан по сведениям представителя, — unknown."
+
+  - id: G-051
+    source: { site: "Клерк.Сообщество", url: "https://club.klerk.ru/t/etrn-den-vtoroj/1264410", date: 2026-09-22 }
+    story: "Покупатель в обсуждении ЭТрН спрашивает про возврат товара поставщику и про бесплатную доставку."
+    question: "Нужна ли ЭТрН на возврат и кто грузоотправитель? Бесплатная доставка — это перевозка?"
+    facts: {}
+    verdict: ambiguous
+    forum: split
+    notes: "Отказ от приёмки при доставке — та же ЭТрН через переадресовку (ПП 931 прил. 1 п. 5 «г», «л»). Возврат ранее принятого — новая перевозка, роли по общим правилам с обратной ролью сторон: кто заключил договор с перевозчиком, тот ГО (Устав ст. 2 ч. 1 п. 4); поставщик сам забирает наёмным перевозчиком — ГО = ГП, бумага допустима (приказ № 262 п. 7); своим ТС — ТрН не нужна (R-001, R-002 по аналогии). Бесплатная доставка своим ТС — не перевозка по договору (R-001), наёмным перевозчиком — перевозка независимо от того, кто платит (R-003). Форум: «да, для перевозчика это обычная перевозка» и «своим транспортом для своих нужд — не считается»."
+    gap: "Опросник спрашивает про продавца и покупателя, при возврате роли обратные — факт return_stage (C2 С5)."
+
+  # ---------- До 01.09.2026: сценарии, которых нет среди сентябрьских сообщений ----------
+
+  - id: G-101
+    before_start: true
+    source: { site: "nalog-nalog.ru, форум", url: "https://nalog-nalog.ru/forum/buhuchet-dlya-chajnikov/kak-oformlyat-etrn-pri-vozvrate-gruza-v-2026-godu/", date: 2026-08-25, date_note: "похоже на заготовку редакции" }
+    story: "Покупатель возвращает брак поставщику нанятым перевозчиком, в том числе частично."
+    text_facts: { transport: hired_carrier }
+    question: "Нужна новая ЭТрН или корректировка?"
+    facts: {}
+    verdict: ambiguous
+    forum: agrees
+    notes: "Отказ ГП от приёмки при доставке оформляется в той же ЭТрН через переадресовку (ПП 931 прил. 1 п. 5 «г», «л»). Возврат после приёмки — по смыслу новая перевозка, роли по тем же правилам. В базе сценария нет."
+    gap: "Возврат и отказ от приёмки — QUESTIONS №28."
+
+  - id: G-102
+    before_start: true
+    source: { site: "nalog-nalog.ru, форум", url: "https://nalog-nalog.ru/forum/buhuchet-dlya-chajnikov/kak-oformit-izmenenie-adresa-dostavki-v-etrn-esli-gruz-uzhe-v-puti/", date: 2026-08-21, date_note: "похоже на заготовку редакции" }
+    story: "Груз уже в пути, адрес доставки меняется."
+    question: "Новая ЭТрН или дополнительный титул?"
+    facts: {}
+    verdict: ambiguous
+    forum: split
+    notes: "Указание о переадресовке даёт ГО, ГП — только если ГО передал ему полномочия в Т1 (формат 5.01 табл. 5.13). По ПП 931 это отдельный файл ГО (п. 3 «д», п. 13); в формате 5.01 указание отражается в файле перевозчика ON_TRNPEREADR (`ОснПА`, `ЭПУвПА`). Форум «первым подписывает перевозчик» — по формату файл действительно формирует и подписывает перевозчик, но на основании указания ГО. Порядок переадресовки по Уставу ст. 15 ч. 4 — по правилам перевозок, которых сейчас нет."
+    gap: "Слоя «подписи и титулы» в rules.yaml нет; порядок переадресовки — QUESTIONS №5, №16."
+
+  - id: G-103
+    before_start: true
+    source: { site: "nalog-nalog.ru, форум", url: "https://nalog-nalog.ru/forum/buhuchet-dlya-chajnikov/mezhdunarodnaya-perevozka-moskva-minsk-v-2026-g-cmr-ili-etrn/", date: 2026-08-19, date_note: "похоже на заготовку редакции" }
+    story: "Перевозка Москва — Минск: одним договором или двумя (российское плечо отдельно)."
+    question: "Достаточно CMR или нужна ЭТрН?"
+    facts: { international: yes }
+    expect: { rules: [R-010], carriage_doc: international, certainty: clear }
+    verdict: answer
+    forum: agrees
+    notes: "Один договор с пунктами в разных странах — CMR (R-010; КДПГ ст. 1 п. 1). Отдельный договор на российское плечо — внутренняя перевозка, ЭТрН (international: no)."
+
+  - id: G-104
+    before_start: true
+    source: { site: "Клерк, форум", url: "https://club.klerk.ru/t/nuzhno-li-samozanyatym-primenyat-etrn/1264345", date: 2026-08-25 }
+    story: "Самозанятый на собственном манипуляторе возит грузы юрлицам по договорам."
+    text_facts: { transport: hired_carrier }
+    question: "Нужна ли ему ЭТрН с 01.09.2026?"
+    facts: {}
+    verdict: ambiguous
+    forum: split
+    notes: "Самозанятый без статуса ИП перевозчиком по Уставу быть не может (ст. 2 ч. 1 п. 13; заметка N-SELFEMP). Услуги спецтехники — не перевозка; аренда с экипажем — R-017 (спорно)."
+    gap: "QUESTIONS №20, №22."
+
+  - id: G-105
+    before_start: true
+    source: { site: "nalog-nalog.ru, форум", url: "https://nalog-nalog.ru/forum/izmeneniya-2026/transportnaya-kompaniya-schitaet-chto-sozdavat-etrn-dolzhen-tot-kto-privez-sdavat-gruz-hotya-my-ne-storona-dogovora-perevozki/", date: 2026-08-26 }
+    story: "Договор перевозки или экспедиции с ТК заключил покупатель, он оплачивает доставку. Продавец своей машиной привозит груз со склада на терминал ТК. ТК считает, что ЭТрН создаёт тот, кто привёз груз. Уточнение автора: а если на терминал везёт наёмный перевозчик по договору с продавцом?"
+    question: "Кто создаёт ЭТрН?"
+    legs:
+      - name: "Склад продавца → терминал ТК своим транспортом"
+        facts: { transport: own_seller }
+        assumed: { international: no }
+        expect: { rules: [], ask: [seller_paid_delivery] }
+      - name: "Терминал → покупатель, договор с ТК-перевозчиком заключил покупатель"
+        facts: { transport: hired_carrier, carriage_customer: buyer }
+        assumed: { international: no, tmc_accounting: yes, owner_escort: no }
+        expect: { rules: [R-004, R-107], carriage_doc: etrn, roles: { shipper: buyer, consignee: buyer }, form: paper_allowed }
+      - name: "Вариант автора: склад → терминал наёмным перевозчиком продавца"
+        facts: { transport: hired_carrier, carriage_customer: seller, consignee_party: terminal }
+        assumed: { international: no, tmc_accounting: yes, owner_escort: no }
+        expect: { rules: [R-003], carriage_doc: etrn, certainty: unknown }
+    verdict: answer
+    forum: agrees
+    notes: "ГО — сторона договора перевозки (Устав ст. 2 ч. 1 п. 4), а не тот, кто привёз груз; ТрН составляет ГО, если договором перевозки не предусмотрено иное (ст. 8 ч. 1), а договор покупателя с ТК продавца не обязывает. На терминале грузит ТК, продавец не ЛОП. Если договор с ТК — экспедиция и ТК принимает груз, ГО — ТК (R-007). Наёмный перевозчик до терминала: кто ГП при доставке на терминал — QUESTIONS №24."
+    gap: "Вид договора с ТК — вопрос tk_contract (словарь 0.5); плечи — проходом по частям (подсказка вопроса transport)."
+
+  - id: G-106
+    before_start: true
+    source: { site: "nalog-nalog.ru, форум", url: "https://nalog-nalog.ru/forum/izmeneniya-2026/etrn-neskolko-scenariev/", date: 2026-08-28 }
+    story: "Семь сценариев отправки через крупную ТК: продавец своим ТС до терминала (доставка в цене товара или за счёт покупателя); курьер ТК забирает у продавца по заказу продавца или покупателя; торговая компания вызывает курьера ТК к своему поставщику и отправляет сразу своему заказчику."
+    question: "Какие документы на каждом этапе?"
+    legs:
+      - name: "Сц. 1: продавец своим ТС до терминала, доставка в цене товара"
+        facts: { transport: own_seller, seller_paid_delivery: no }
+        assumed: { international: no }
+        expect: { rules: [], ask: [ownership_before_delivery] }
+      - name: "Сц. 3А: курьер ТК забирает у продавца, заказ и оплата продавца"
+        facts: { transport: hired_carrier, carriage_customer: seller }
+        assumed: { international: no, tmc_accounting: yes, owner_escort: no }
+        expect: { rules: [R-003], carriage_doc: etrn, roles: { shipper: seller }, form: electronic }
+      - name: "Сц. 4: курьер ТК забирает у продавца, заказ и оплата покупателя"
+        facts: { transport: hired_carrier, carriage_customer: buyer }
+        assumed: { international: no, tmc_accounting: yes, owner_escort: no }
+        expect: { rules: [R-004, R-107], carriage_doc: etrn, roles: { shipper: buyer, consignee: buyer, loader: seller }, form: paper_allowed }
+      - name: "Сц. 6: торговая компания заказывает забор у своего поставщика и доставку своему заказчику"
+        facts: { transport: hired_carrier, carriage_customer: buyer, consignee_party: customer_buyer }
+        assumed: { international: no, tmc_accounting: yes, owner_escort: no }
+        expect: { rules: [R-004], carriage_doc: etrn, roles: { shipper: buyer, consignee: third_party }, form: electronic }
+    verdict: answer
+    forum: contradicts
+    notes: "Сц. 1–2 и 7 форум ответил так же (своим ТС — договора перевозки нет). Сц. 4 форум назвал ГО продавца — по Уставу ст. 2 ч. 1 п. 4 ГО тот, кто заключил договор перевозки (покупатель), продавец может подписать Т1 как ЛОП. Сц. 6 форум назвал экспедированием: торговая компания заключает договор перевозки от своего имени на свой груз, она ГО, ГП — её заказчик. Если ТК работает по договору экспедиции — роли по R-007/R-008. ЭЗЗ «обязателен» — не по норме (С4, PARKING)."
+    gap: "Закрыто словарём 0.5: вариант «Транспортная компания» и вопрос tk_contract."

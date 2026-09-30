@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="yandex-verification" content="3abad3fadbfe2bea">
+<title>Кто есть кто в ЭТрН</title>
+<style>
+:root{--bg:#fafaf7;--fg:#1d1d1b;--muted:#6b6b66;--card:#fff;--line:#e3e2dc;--accent:#1f5f8b;--ok:#2e7d32;--warn:#b26a00;--bad:#b3261e}
+@media (prefers-color-scheme:dark){:root{--bg:#161615;--fg:#ecebe6;--muted:#a3a29b;--card:#20201e;--line:#34332f;--accent:#7cb4dc;--ok:#7bc47f;--warn:#e0a84a;--bad:#ef8a80}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:720px;margin:0 auto;padding:16px}
+h1{font-size:1.15rem;margin:.2rem 0 1rem}
+h1 a{color:inherit;text-decoration:none}
+h2{font-size:1.25rem;margin:0 0 .5rem;line-height:1.3}
+h3{font-size:1rem;margin:1.5rem 0 .5rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+.hint{color:var(--muted);font-size:.93rem;margin:.25rem 0 1rem}
+.step{color:var(--muted);font-size:.85rem}
+label.opt{display:flex;gap:.6rem;align-items:flex-start;padding:.7rem .75rem;border:1px solid var(--line);border-radius:10px;margin:.5rem 0;cursor:pointer}
+label.opt input{margin-top:.3rem;flex:none}
+.actions{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:1rem}
+button{font:inherit;padding:.65rem 1.1rem;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--fg);cursor:pointer}
+a.btn{display:inline-block;padding:.65rem 1.1rem;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--fg);text-decoration:none}
+.bots{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin:0 0 12px}
+.bots>span{flex-basis:100%}
+a.bot{display:inline-flex;align-items:center;gap:.5rem;padding:.5rem .9rem;font-weight:600}
+a.bot svg{width:24px;height:24px;flex:none}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){button.primary{color:#111}}
+table{width:100%;border-collapse:collapse;font-size:.95rem}
+td,th{text-align:left;vertical-align:top;padding:.45rem .3rem;border-bottom:1px solid var(--line)}
+th{font-weight:600;width:42%}
+.badge{display:inline-block;padding:.15rem .55rem;border-radius:999px;font-size:.85rem;border:1px solid currentColor}
+.ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}
+.big{font-size:1.1rem;font-weight:600;margin:.2rem 0}
+.src{font-size:.88rem;color:var(--muted);margin:.4rem 0 0;padding-left:1rem}
+.src li{margin:.35rem 0}
+blockquote{margin:.2rem 0;font-style:italic}
+details summary{cursor:pointer;color:var(--accent)}
+.small{font-size:.85rem;color:var(--muted)}
+a{color:var(--accent)}
+.note{border-left:3px solid var(--warn);padding-left:.75rem}
+textarea{width:100%;font:inherit;padding:.6rem .75rem;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--fg);resize:vertical}
+.ohint{display:block;color:var(--muted);font-size:.85rem;margin-top:.2rem}
+.quote{display:block;font-style:italic;color:var(--muted);font-size:.9rem}
+label.consent{display:flex;gap:.6rem;align-items:flex-start;font-size:.9rem;margin:.75rem 0 0}
+label.consent input{margin-top:.25rem;flex:none}
+.banner{border-color:var(--accent)}
+.doc p{white-space:pre-line}
+footer{margin-top:1.5rem}
+footer a{margin-right:1rem}
+</style>
+{{if .Metrika}}<script src="/metrika.js" async></script>{{end}}
+</head>
+<body>
+<main>
+<h1><a href="/">Кто есть кто в ЭТрН</a></h1>
+
+{{if .Banner}}
+<form method="post" action="/cookies" class="card banner">
+  <p>Разрешите Яндекс Метрике считать посещения сайта. Она ставит cookie и получает ваш IP-адрес и сведения о браузере; запись действий на странице выключена. Без вашего «Согласен» счётчик не загружается.
+  <a href="/consent/metrika">Текст согласия</a> · <a href="/privacy">Политика</a></p>
+  {{range .Hidden}}<input type="hidden" name="{{.Key}}" value="{{.Value}}">{{end}}
+  <input type="hidden" name="h" value="{{.Hist}}"><input type="hidden" name="via" value="{{.Via}}"><input type="hidden" name="ret" value="{{.Ret}}">
+  <div class="actions">
+    <button class="primary" type="submit" name="metrika" value="yes">Согласен</button>
+    <button type="submit" name="metrika" value="no">Отказаться</button>
+  </div>
+</form>
+{{end}}
+
+{{with .Doc}}
+<article class="card doc">
+  <h2>{{.Title}}</h2>
+  {{range .Blocks}}{{if .Head}}<h3>{{.Head}}</h3>{{else if .Items}}<ul>{{range .Items}}<li>{{.}}</li>{{end}}</ul>{{else}}<p>{{.Para}}</p>{{end}}
+  {{end}}
+  <p class="small">Документ {{.Version}}, контрольная сумма sha256 {{.SHA}}</p>
+</article>
+{{end}}
+
+{{with .Cookies}}
+<form method="post" action="/cookies" class="card">
+  <h2>Настройки cookie</h2>
+  <p>Сайт ставит одну свою cookie — aktura_metrika, она запоминает ваш выбор ниже. Яндекс Метрика загружается и ставит свои cookie, только если вы согласились.</p>
+  <p>Сейчас: <b>{{if eq .Choice "yes"}}Метрика разрешена{{else if eq .Choice "no"}}Метрика запрещена{{else}}выбор не сделан — Метрика не загружается{{end}}</b>{{if .Saved}} <span class="ok">· сохранено</span>{{end}}</p>
+  <p class="small"><a href="/consent/metrika">Текст согласия</a> · <a href="/privacy">Политика</a> · <a href="https://yandex.ru/support/metrica/ru/general/opt-out" rel="noopener" target="_blank">Блокировщик Яндекс.Метрики</a></p>
+  <div class="actions">
+    <button class="primary" type="submit" name="metrika" value="yes">Разрешить Метрику</button>
+    <button type="submit" name="metrika" value="no">Отказаться</button>
+  </div>
+</form>
+{{end}}
+
+{{with .AI}}{{if .Form}}
+<form method="post" action="/describe" class="card">
+  <h2>Опишите перевозку своими словами</h2>
+  <p class="hint">Кто продаёт и кто покупает, кто везёт и на чьём транспорте, кто заказал перевозку и кому выдают груз. Описывайте перевозку, а не людей: не пишите ФИО, названия компаний и реквизиты. Описание уходит на разбор в {{.Model}} и на нашем сервере не сохраняется (<a href="/privacy">политика</a>).</p>
+  {{if .Error}}<p class="bad">{{.Error}}</p>{{end}}
+  <textarea class="ym-disable-keys" name="text" rows="5" maxlength="{{.Max}}" required>{{.Text}}</textarea>
+  <div class="actions"><button class="primary" type="submit">Разобрать описание</button></div>
+  <p class="small">ИИ только предлагает ответы на вопросы, вы их проверите. Роли и выводы даёт движок по нормам. Можно и сразу ответить на вопросы ниже.</p>
+</form>
+{{end}}{{end}}
+
+{{if or .Q .R .AI}}{{if or .Q .R .AI.Confirm}}
+<form method="post" action="/step">
+{{range .Hidden}}<input type="hidden" name="{{.Key}}" value="{{.Value}}">
+{{end}}<input type="hidden" name="h" value="{{.Hist}}"><input type="hidden" name="via" value="{{.Via}}">
+
+{{with .AI}}{{if .Confirm}}
+<div class="card ym-hide-content">
+  <h2>Что понято из описания</h2>
+  {{if .Items}}<p class="hint">Снимите галочку, если понято неверно, — этот вопрос вам зададут отдельно.</p>
+  {{range .Items}}<label class="opt"><input type="checkbox" name="{{.Name}}" value="{{.Value}}" checked><span><b>{{.Question}}</b><br>{{.Label}}<span class="quote">«{{.Quote}}»</span></span></label>
+  {{end}}{{else}}<p>Из описания не удалось однозначно понять ни одного ответа. Ответьте, пожалуйста, на вопросы.</p>{{end}}
+  <div class="actions">
+    <button class="primary" type="submit">Продолжить</button>
+    <a class="btn" href="/">Начать заново</a>
+  </div>
+</div>
+{{end}}{{end}}
+
+{{with .Q}}
+<div class="card">
+  <div class="step">Вопрос {{$.Step}}</div>
+  <h2>{{.Text}}</h2>
+  <p class="hint">{{.Hint}}</p>
+  <input type="hidden" name="q" value="{{.ID}}">
+  {{if .Group}}
+    {{range .Options}}<label class="opt"><input type="checkbox" name="g" value="{{.Fact}}"{{if index $.Q.Checked .Fact}} checked{{end}}><span>{{.Label}}{{if .Hint}}<span class="ohint">{{.Hint}}</span>{{end}}</span></label>
+    {{end}}
+  {{else}}
+    {{range .Options}}<label class="opt"><input type="radio" name="v" value="{{.Value}}" required><span>{{.Label}}{{if .Hint}}<span class="ohint">{{.Hint}}</span>{{end}}</span></label>
+    {{end}}
+  {{end}}
+  <div class="actions">
+    <button class="primary" type="submit">Дальше</button>
+    <button type="submit" name="unknown" value="1" formnovalidate>Не знаю</button>
+    {{if $.Hist}}<button type="submit" name="back" value="1" formnovalidate>Назад</button>{{end}}
+  </div>
+</div>
+{{end}}
+
+{{with .R}}
+<div class="card">
+  {{if .Error}}<p class="bad">Ошибка базы правил: {{.Error}}</p>{{end}}
+  {{if .Found}}
+    <p class="big">{{.CarriageDoc}}</p>
+    {{if .Form}}<p>{{.Form}}</p>{{end}}
+    {{if .FormNote}}<p class="small">{{.FormNote}}</p>{{end}}
+    <p><span class="badge {{.CertClass}}">{{.Certainty}}</span></p>
+    {{if .Terminal}}<p class="note">Кто грузополучатель при доставке на терминал другой транспортной компании или службы доставки, нормы прямо не определяют.</p>{{end}}
+  {{else}}
+    <p class="big">Правило не найдено</p>
+    <p><span class="badge bad">{{.Certainty}}</span></p>
+    {{if .Missing}}<p>Для ответа не хватает ответов на вопросы:</p>
+    <ul>{{range .Missing}}<li>{{.}}</li>{{end}}</ul>{{end}}
+    <p class="small">Нажмите «Назад», чтобы изменить ответ, или уточните факты у контрагента.</p>
+    {{if .FwdDocs}}<p class="note">Это о транспортной накладной. Экспедиторские документы от этого не зависят — они ниже.</p>{{end}}
+  {{end}}
+</div>
+
+{{if .Roles}}
+<div class="card">
+  <h2>Кто есть кто</h2>
+  <table>{{range .Roles}}<tr><th>{{.Key}}</th><td>{{.Value}}</td></tr>{{end}}</table>
+  {{if .ForwarderMark}}<p class="small">В разделе «Грузоотправитель» проставляется отметка «является экспедитором», клиент указывается в сведениях о заказчике.</p>{{end}}
+</div>
+{{end}}
+
+{{if .Titles}}
+<div class="card">
+  <h2>Кто что подписывает</h2>
+  <table>
+  {{range .Titles}}<tr><th>{{cyr .Title}} · {{.File}}</th><td>{{.Who}}{{if .Detail}}<div class="small">{{.Detail}}</div>{{end}}{{if .Driver}}<div class="small">{{.Driver}}</div>{{end}}{{if .Note}}<details class="small"><summary>Пояснение для специалистов</summary>{{.Note}}</details>{{end}}</td></tr>
+  {{end}}</table>
+  <p class="small">ПП РФ № 931, прил. 1, п. 3. Подпись — УКЭП или УНЭП; представитель — по доверенности, в т. ч. машиночитаемой.</p>
+</div>
+{{end}}
+
+{{if .FwdDocs}}
+<div class="card">
+  <h2>Экспедиторские документы</h2>
+  <ul>{{range .FwdDocs}}<li>{{.}}</li>{{end}}</ul>
+  {{if .FwdForm}}<p>{{.FwdForm}}</p>{{end}}
+  <p class="small">87-ФЗ ст. 2 п. 3; ПП РФ № 469. Это документы договора экспедиции между клиентом и экспедитором — отдельно от транспортной накладной.</p>
+</div>
+{{end}}
+
+{{if .Rules}}
+<div class="card">
+  <h2>Основания</h2>
+  {{range .Rules}}
+  <h3>{{.ID}}. {{.Title}} <span class="badge {{.CertClass}}">{{.Certainty}}</span></h3>
+  {{if .Notes}}<details class="small"><summary>Пояснение для специалистов</summary><p>{{.Notes}}</p></details>{{end}}
+  <ul class="src">{{range .Sources}}<li>{{if .URL}}<a href="{{.URL}}" rel="noopener" target="_blank">{{.Act}}</a>{{else}}{{.Act}}{{end}}<blockquote>«{{.Quote}}»</blockquote>Проверено {{.Checked}}</li>{{end}}</ul>
+  {{end}}
+</div>
+{{end}}
+
+<div class="actions">
+  <button type="submit" name="back" value="1" formnovalidate>Назад</button>
+  <a class="btn" href="/">Начать заново</a>
+</div>
+{{end}}
+</form>
+{{end}}{{end}}
+
+{{with .FB}}
+{{if .Sent}}<div class="card"><p class="ok">Спасибо! Отзыв сохранён — по нему проверим правила.</p></div>
+{{else}}
+<form method="post" action="/feedback" class="card">
+  <h2>В моей ситуации это не так</h2>
+  <p class="hint">Что в ответе не совпадает с вашей ситуацией? Описывайте ситуацию, а не людей: не пишите ФИО, названия компаний и реквизиты. Отзыв хранится 12 месяцев без имени, контактов и IP-адреса (<a href="/privacy">политика</a>).</p>
+  {{if .Error}}<p class="bad">{{.Error}}</p>{{end}}
+  {{range $.Hidden}}<input type="hidden" name="{{.Key}}" value="{{.Value}}">{{end}}
+  <input type="hidden" name="h" value="{{$.Hist}}"><input type="hidden" name="via" value="{{$.Via}}">
+  <textarea class="ym-disable-keys" name="comment" rows="4" maxlength="1000" required>{{.Comment}}</textarea>
+  <div class="actions"><button type="submit">Отправить</button></div>
+</form>
+{{end}}
+{{end}}
+
+{{if .Answers}}
+<details class="card">
+  <summary>Ваши ответы ({{len .Answers}})</summary>
+  <table>{{range .Answers}}<tr><th>{{.Key}}</th><td>{{.Value}}</td></tr>{{end}}</table>
+</details>
+{{end}}
+
+{{if .Bots}}<div class="bots"><span class="small">Опросник в мессенджере:</span>{{range .Bots}}<a class="btn bot" href="{{.Value}}" rel="noopener" target="_blank">{{if eq .Key "MAX"}}<svg viewBox="0 0 100 100" aria-hidden="true"><defs><linearGradient id="maxg" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#00BFFF"/><stop offset=".5" stop-color="#471AFF"/><stop offset="1" stop-color="#9500FF"/></linearGradient></defs><path fill="url(#maxg)" fill-rule="evenodd" d="M50.7571 0.261719C78.2929 0.261719 99.8857 22.5974 99.8857 50.1474C99.8857 77.6974 77.6071 99.4903 51.0214 99.4903C41.5857 99.4903 37.0143 98.1617 29.65 92.9474C29.1429 92.5903 28.45 92.6831 28.0214 93.1403C22.3571 99.1831 7.85 103.426 7.18571 95.176C7.18571 80.7903 0 71.4474 0 49.876C0 21.5546 23.2214 0.261719 50.7571 0.261719ZM51.5286 24.8117C38.4643 24.126 28.2643 33.1974 26.0143 47.3831C24.15 59.1332 27.45 73.4546 30.2786 74.176C31.4786 74.4832 34.3571 72.276 36.4571 70.2974C36.85 69.926 37.45 69.8617 37.9071 70.1474C41.1786 72.1474 44.8786 73.6474 48.9571 73.8617C62.3714 74.5617 74.2571 64.0617 74.9643 50.6474C75.6643 37.2331 64.9429 25.5046 51.5286 24.8046V24.8117Z"/></svg>{{else}}<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#fff"/><path fill="#26A5E4" d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>{{end}}<span>{{.Key}}</span></a>{{end}}</div>
+{{end}}<p class="small">Справочный инструмент, не юридическая консультация. Роли и выводы даёт детерминированный движок по базе правил со ссылками на нормы; при спорных вопросах уточните у контрагента или консультанта.
+База правил {{.Meta.Version}} от {{.Meta.Date}}, вопросы {{.Quiz}}.</p>
+{{if or .Privacy .Cookie}}<footer class="small">{{if .Privacy}}<a href="/privacy">Политика обработки персональных данных</a>{{end}}{{if .Cookie}}<a href="/cookies">Настройки cookie</a>{{end}}</footer>{{end}}
+</main>
+</body>
+</html>
